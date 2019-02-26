@@ -43,15 +43,20 @@ void arm::setImage(uint8_t** imgData){
 
 
 void arm::showImage(){
-  debugln("ARM: Showing Image on arm: " + String(arm_no));
+  debug("INIT: Showing Image on arm: " + String(arm_no));
+  Serial.print("no colls"); Serial.println(noColumns);
   while(1){
     isRunning = true;
-    if(canRun){
+    if(_colPointer < noColumns){
       showColumn( _imgData[_colPointer] );           // show the next column
-      _colPointer   = (_colPointer + 1)%noColumns;    // increment the column pointer and make sure that we dont exceed the maximum
+      _colPointer   = (_colPointer + 1);    // increment the column pointer and make sure that we dont exceed the maximum
       delayMicroseconds(delayBetweenColumns);
       canRun = false;
     }
+    else{
+      leds->clear();
+    }
+    //vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
@@ -64,7 +69,7 @@ bool arm::isTaskCreated(){
 void arm::stop(){
    if(isTaskCreated()){
     debugln("ARM: Suspending task on arm: "+ String(arm_no));
-    vTaskSuspend(_mytask);
+    //vTaskSuspend(_mytask);
     isRunning = false;
    }
    else debug("ARM: Error! No Task found");
@@ -75,7 +80,7 @@ void arm::resume(){
   if(isTaskCreated()){
     debugln("ARM: Resuming task on arm: "+ String(arm_no));
     _colPointer = 0;     // set column pointer back to zero
-    vTaskResume(_mytask);
+    //vTaskResume(NULL);
   }
   else debugln("ARM: Error! No Task found");
 }

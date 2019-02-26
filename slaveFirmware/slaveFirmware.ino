@@ -16,7 +16,7 @@ void setup()
 
   // initialize arms
   arm1.setCore(0);
-  arm2.setCore(1);
+  arm2.setCore(0);
   setupIsr();
 
   initComm();

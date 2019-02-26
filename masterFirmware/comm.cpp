@@ -140,7 +140,7 @@ void slave::sendBuf(uint8_t* buf, uint16_t len)
   {
     mySerial->write(buf[i]);
   }
-  //mySerial->flush();
+  mySerial->flush();
 }
 
 // function to wait for and receive data from slave
