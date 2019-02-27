@@ -50,8 +50,8 @@ void myInit(){
 
 // Initialize the slave part of our master
 void armsInit(void){
-  arm1.setCore(0);  // set up arms
-  arm2.setCore(1);
+  arm1.setCore(0);  // set up arms, let both arm tasks run on core 0
+  arm2.setCore(0);
   setupIsr();
 }
 

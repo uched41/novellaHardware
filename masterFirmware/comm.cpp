@@ -27,7 +27,7 @@ slave::slave(uint8_t tx, uint8_t rx, uint8_t serInstance){
 
    mySerial = new HardwareSerial(serInstance);
    mySerial->begin(myBaudRate, SERIAL_8N1, rx, tx);
-   mySerial->setTimeout(4000);
+   mySerial->setTimeout(2000);
 }
 
 /*void slave::triggerAction(){
@@ -46,11 +46,11 @@ bool slave::attemptSend(){
   if(res){
     debugln("OK: Data sent to slave" + String(serialInstance));
     //triggerAction();  // trigger slave to start
-    return 1;
+    return true;
   }
   else{
     errorHandler("ERROR: Failed to send data to slave ");
-    return 0;
+    return false;
   }
 }
 
@@ -140,7 +140,7 @@ void slave::sendBuf(uint8_t* buf, uint16_t len)
   {
     mySerial->write(buf[i]);
   }
-  //mySerial->flush();
+  mySerial->flush();    // wait for transmission of outgoing serial data to complete
 }
 
 // function to wait for and receive data from slave

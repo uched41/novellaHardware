@@ -46,12 +46,12 @@ void arm::showImage(){
   Serial.print("no colls"); Serial.println(noColumns);
   while(1){
     isRunning = true;
-    //if(canRun){
+    if(canRun){
       showColumn( _imgData[_colPointer] );           // show the next column
       _colPointer   = (_colPointer + 1)%noColumns;    // increment the column pointer and make sure that we dont exceed the maximum
       delayMicroseconds(delayBetweenColumns);
       canRun = false;
-    //}
+    }
     //vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }

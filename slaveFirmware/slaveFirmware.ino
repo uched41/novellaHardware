@@ -16,7 +16,7 @@ void setup()
 
   // initialize arms
   arm1.setCore(0);
-  arm2.setCore(1);
+  arm2.setCore(0);
   setupIsr();
 
   initComm();
@@ -28,7 +28,7 @@ void loop()
 {
   // put your main code here, to run repeatedly:
   //delay(500);
-  vTaskDelay(10 / portTICK_PERIOD_MS);
+  //vTaskDelay(10 / portTICK_PERIOD_MS);
   commParser();
 }
 

@@ -35,7 +35,7 @@ void initComm()
 {
   debug("Initializing Serial Communication" );
   mySerial.begin(myBaudRate, SERIAL_8N1, SLAVE1_RX, SLAVE1_TX);
-  mySerial.setTimeout(4000);
+  mySerial.setTimeout(2000);
 
   // allocate buffer for columns
   columnBuf = (uint8_t*)malloc( sColumn + 2); // the extra 2 bytes is for the crc
@@ -102,18 +102,21 @@ void commParser()
   }
   debug("OK: Received Starting Sequence.");
 
-  if(!checkCrc(tempBuf, 8))
+  if(!checkCrc(tempBuf, 8)){
+    debug("ERROR: incorrect crc for startign response");
     return;
+  }
 
-  serClear();
+  //serClear();
   uint16_t noCols = tempBuf[4]<<8 | tempBuf[5];
-  sendBuf((uint8_t*)readySignal, buflen(readySignal));
 
   uint8_t **dataStoreBckup = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );  // allocating new backup buffers
   uint8_t* col = (uint8_t*)malloc( sColumn + 2);
 
   uint16_t count=0;   // read all the columns
   debug("INIT: Receiving data from master: " ); Serial.println(noCols);
+  
+  sendBuf((uint8_t*)readySignal, buflen(readySignal));
   
   while(count < noCols)
   {
@@ -225,7 +228,7 @@ void sendBuf(uint8_t* buf, uint16_t len)
   {
     mySerial.write(buf[i]);
   }
-  //mySerial.flush();
+  mySerial.flush();   // wait until all data is sent
 }
 
 // crc function
