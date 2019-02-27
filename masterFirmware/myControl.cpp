@@ -112,6 +112,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       debugln("MQTT: Starting Image, " + String(dispFile));
       splitData((char*)dispFile);
 
+      arm1.stop();
+      arm2.stop();
+      
       if(!slave1.attemptSend()){   // send to slave1
         debugln("MQTT: Unable to send to slave");
         mqttReply("Error");
@@ -121,8 +124,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       mqttReply("OK");
       arm1.setImage(dataStore);   // set image pointers
       arm2.setImage(dataStore);
-      createTask(&arm1);          // Create task if not already created
-      createTask(&arm2);
+     if(arm1.isTaskCreated() && arm2.isTaskCreated()){
+        arm1.resume();          // resume task if already created
+        arm2.resume();
+      }
+      else{
+        createTask(&arm1);          // Create task if not already created
+        createTask(&arm2);
+      }  
+      
     }
     else if(cmd == "Stop_Display"){
       arm1.stop();
@@ -223,8 +233,9 @@ void splitData(char* filename){
   for(int i=0; i<noColumns; i++){     // Free old data store memory
     free(dataStore[i]);
   }
-  free(dataStore);
-
+  //free(dataStore);
+  debugln("COMM: done freeing old memory data store.");
+  
   uint8_t noCols;
   file.read(&noCols, 1);
   noColumns = noCols;

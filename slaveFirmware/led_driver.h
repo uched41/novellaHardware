@@ -27,8 +27,11 @@ class ledDriver
       void setPixel(uint16_t pixel, CRGB col); 
       void setBuffer(uint8_t* buf, uint16_t pixelLen); 
       void show();
-      void transfer(uint8_t b);
+      void startFrame();
+      void endFrame(uint8_t count);
+      void sendColor(CRGB col, uint8_t brightness);
       void refresh();
+      void clear();
 };
 
 

@@ -165,8 +165,15 @@ void commParser()
 
   arm1.setImage(dataStore);   // set image pointers
   arm2.setImage(dataStore);
-  createTask(&arm1);          // Create task if not already created
-  createTask(&arm2);
+
+  if(arm1.isTaskCreated() && arm2.isTaskCreated()){
+    arm1.resume();          // resume task if already created
+    arm2.resume();
+  }
+  else{
+    createTask(&arm1);          // Create task if not already created
+    createTask(&arm2);
+  }  
 
 freeBackup:
   //for(uint8_t i=0; i< noCols; i++){

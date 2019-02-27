@@ -2,6 +2,7 @@
 #include "myconfig.h"
 #include "myControl.h"
 
+
 ledDriver::ledDriver(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t dataPin, uint8_t ssPin)
 {
   _clkPin = clkPin;
@@ -35,32 +36,47 @@ void ledDriver::setBuffer(uint8_t* buf, uint16_t pixelLen)
     }
 }
 
+void ledDriver::startFrame(){
+  _myspi.transfer(0);
+  _myspi.transfer(0);
+  _myspi.transfer(0);
+  _myspi.transfer(0);
+}
+
+void ledDriver::endFrame(uint8_t count){
+  _myspi.transfer(0xFF);
+  for (uint16_t i = 0; i < 5 + count / 16; i++)
+  {
+    _myspi.transfer(0);
+  }
+}
+
+void ledDriver::sendColor(CRGB col, uint8_t brightness){
+  _myspi.transfer(0b11100000 | brightness);
+  _myspi.transfer(col.b / 8 );
+  _myspi.transfer(col.g / 8 );
+  _myspi.transfer(col.r / 8 );
+}
 
 void ledDriver::show()
 {
-  uint8_t* tbuf;
-  tbuf = (uint8_t*)malloc( (sizeof(CRGB)+1) *_length + 8);
+  
+  startFrame();
 
-  uint16_t posi = 0;
-
-  // start sequence
-  for(uint8_t i=0; i<4; i++)
-    tbuf[posi++] = 0x00;
-
-  // data sequence
-  for(uint8_t i=0; i<_length; i++)
-  {
-    tbuf[posi++] = 0xf0;
-    tbuf[posi++] = _buffer[i].b / brightnessVal;    // rgb brightness scaling
-    tbuf[posi++] = _buffer[i].g / brightnessVal;
-    tbuf[posi++] = _buffer[i].r / brightnessVal;
+  for(uint8_t i=0; i<_length; i++){
+    sendColor(_buffer[i], 31);     // where 1 is brightness level
   }
 
-  // end sequence
-  for(uint8_t i=0; i<4; i++)
-    tbuf[posi++] = 0xff;
-
-  _myspi.transferBytes(tbuf, NULL, posi);
-
-  free(tbuf);
+  endFrame(_length);
 }
+
+void ledDriver::clear(){
+  startFrame();
+  CRGB val = {0, 0, 0};
+  for(uint8_t i=0; i<_length; i++){
+    sendColor(val, 31);     // where 1 is brightness level
+  }
+
+  endFrame(_length);
+}
+
