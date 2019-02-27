@@ -10,6 +10,7 @@
 #define LED_COUNT   88
 #define IMAGE_LENGTH 150
 #define IMAGE_HEIGHT LED_COUNT
+#define sColumn   IMAGE_HEIGHT*3           // size of one column array
 
 // SPI1 pins
 #define DATA_PIN1   13
@@ -32,12 +33,9 @@
 #define myBaudRate 115200
 
 #define debugSerial Serial
-void debug(String c);
+#define debugln(c)    debugSerial.println(c)
+#define debug(c)      debugSerial.print(c)
 
 extern bool canPlay;
-extern volatile uint16_t noColumns;
-
-//extern arm arm1;
-//extern arm arm2;
 
 #endif

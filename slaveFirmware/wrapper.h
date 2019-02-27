@@ -7,6 +7,6 @@ void isr2();
 void setupIsr();
 void Arm1Task(void *pvparameters);
 void Arm2Task(void *pvparameters);
-void createTask(arm* myarm);
+bool createTask(arm* myarm);
 
 #endif

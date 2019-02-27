@@ -1,5 +1,3 @@
-#include "FS.h"
-#include "SPIFFS.h"
 #include <WiFi.h>              // Built-in
 #include "myconfig.h"
 #include "myControl.h"
@@ -32,7 +30,7 @@ int FILE_BUF_SIZE = 512;    // must correlate with mqtt buf size
 
 File mqttFile;
 
-uint8_t **dataStore;         // array of pointers to store the data. Allocated dynamically
+DataBuffer dataStore(sColumn);         // Data storer object
 
 // function to initiialize mqtt
 void mqttInit(void){
@@ -60,6 +58,7 @@ void mqttInit(void){
   debug("MQTT Topics: "); debugln(mqtt_input_topic);
 }
 
+
 // Call back function to process received data
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   debug("MQTT: Message arrived [");  debug(topic); debugln("] ");
@@ -68,11 +67,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   String tstring = String(topic);
   DynamicJsonBuffer  jsonBuffer(200);     // Config messages will be sent as Json
   JsonObject& root = (tstring.indexOf("mid") == -1) ? jsonBuffer.parseObject(payload) : jsonBuffer.createObject();
-  /*if (!root.success() ) {
-    mqttReply("parseObject() failed");
-    return;
-  }*/
-  
+
+  // Receiving file
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
     if(tstring.indexOf("mid") > -1){   // receiving file content
       debugln(".here");
@@ -99,10 +95,12 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
     return ;
   }
-  else if(root.containsKey("command")){    // parse commands first 
+
+  // Receiving command
+  else if(root.containsKey("command")){   
     String cmd = root["command"];
 
-    // switch through the different command available
+    // Command to start displaying file
     if(cmd == "Start_Display"){
       if(!root.containsKey("file")){
         mqttReply("No File Specified"); 
@@ -110,7 +108,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       }
       const char* dispFile = root["file"];
       debugln("MQTT: Starting Image, " + String(dispFile));
-      splitData((char*)dispFile);
+      dataStore.setBuffer((char*)dispFile);   // copy data from file into buffer
 
       arm1.stop();
       arm2.stop();
@@ -120,10 +118,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         mqttReply("Error");
         return;
       }
+      
       debugln("MQTT: Data sent to slave");
       mqttReply("OK");
-      arm1.setImage(dataStore);   // set image pointers
-      arm2.setImage(dataStore);
+      setArmData(dataStore._buffer, dataStore._noColumns);
+    
      if(arm1.isTaskCreated() && arm2.isTaskCreated()){
         arm1.resume();          // resume task if already created
         arm2.resume();
@@ -132,13 +131,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         createTask(&arm1);          // Create task if not already created
         createTask(&arm2);
       }  
-      
+      return;
     }
+
+    // Command to stop display
     else if(cmd == "Stop_Display"){
       arm1.stop();
       arm2.stop();
       mqttReply("OK");
+      return;
     }
+
+    // Command to get files in memory 
     else if(cmd == "Get_Files"){
       File rootfs = SPIFFS.open("/");
       File fi = rootfs.openNextFile();
@@ -157,6 +161,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       mqttReply(tem3);
       free(tem3);
     }
+    
     return ;
   }
   
@@ -216,41 +221,6 @@ void mqttReply(char* msg){
   
   mqttclient.publish(mqtt_output_topic, temp1);
   free(temp1);
-}
-
-// Function to split the image data into columns
-void splitData(char* filename){
-  /*
-    Note: First byte of all files is the number of columns.
-  */
-  debugln("COMM: Split data.");
-  File file= SPIFFS.open(filename);
-  if(!file) {
-    errorHandler("ERROR: failed to open file."); return;
-  }
-  debugln("COMM: freeing old memory data store.");
-
-  for(int i=0; i<noColumns; i++){     // Free old data store memory
-    free(dataStore[i]);
-  }
-  //free(dataStore);
-  debugln("COMM: done freeing old memory data store.");
-  
-  uint8_t noCols;
-  file.read(&noCols, 1);
-  noColumns = noCols;
-
-  dataStore = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );
-
-  for(uint8_t it=0; it<noCols; it++)  {
-    uint8_t* newCol = (uint8_t*)malloc(sColumn);   // new column array
-    file.readBytes((char*)newCol, sColumn);
-    dataStore[it]=newCol;
-  }
-
-  file.close();
-  debugln("COMM: data split complete");
-  return;
 }
 
 // Brightness control

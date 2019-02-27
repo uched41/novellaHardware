@@ -3,10 +3,17 @@
 #include "wrapper.h"
 #include "comm.h"
 
-arm::arm(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t dataPin, uint8_t ssPin, int len){
+int delayBetweenColumns = 1000;    // in microseconds
+int delayBetweenImages  = 1000;    // in microseconds
+
+uint8_t** arm::_imgData = NULL;
+int arm::_noColumns = 0;
+
+arm::arm(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t dataPin, uint8_t ssPin, int len, uint8_t armno){
   leds = new ledDriver(myspi, clkPin, misoPin, dataPin, ssPin);
   _len = len;
   leds->begin(len);
+  arm_no = armno;
 }
 
 void IRAM_ATTR arm::execIsr(){
@@ -15,7 +22,6 @@ void IRAM_ATTR arm::execIsr(){
    *  which means that we hav reached the 180 degrees point
    */
    portENTER_CRITICAL_ISR(&mux);
-   canRun = true;
    debugln("ARM: Restarting Image on arm: " + String(arm_no) );
     _colPointer = 0;
    portEXIT_CRITICAL_ISR(&mux);
@@ -23,7 +29,6 @@ void IRAM_ATTR arm::execIsr(){
 
 
 void arm::showColumn(uint8_t* buf){
-
     portENTER_CRITICAL_ISR(&mux);     // mutex will prevent 2 cores from accessing memory at the same time
     leds->setBuffer(buf, _len);
     portEXIT_CRITICAL_ISR(&mux);
@@ -33,30 +38,22 @@ void arm::showColumn(uint8_t* buf){
 
 void arm::setCore(uint8_t core){
   _core = core;
-  arm_no = _core + 1;
-}
-
-
-void arm::setImage(uint8_t** imgData){
-  _imgData = imgData;
 }
 
 
 void arm::showImage(){
-  debug("INIT: Showing Image on arm: " + String(arm_no));
-  Serial.print("no colls"); Serial.println(noColumns);
+  debugln("INIT: Showing Image on arm: " + String(arm_no));
+  Serial.print("no columns: "); Serial.println(_noColumns);
   while(1){
     isRunning = true;
-    if(_colPointer < noColumns){
-      showColumn( _imgData[_colPointer] );           // show the next column
-      _colPointer   = (_colPointer + 1);    // increment the column pointer and make sure that we dont exceed the maximum
+    if(_colPointer < _noColumns){
+      showColumn( _imgData[_colPointer] );        // show the next column
+      _colPointer   = (_colPointer + 1);          // increment the column pointer and make sure that we dont exceed the maximum
       delayMicroseconds(delayBetweenColumns);
-      canRun = false;
     }
     else{
       leds->clear();
     }
-    //vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
@@ -69,10 +66,10 @@ bool arm::isTaskCreated(){
 void arm::stop(){
    if(isTaskCreated()){
     debugln("ARM: Suspending task on arm: "+ String(arm_no));
-    //vTaskSuspend(_mytask);
+    vTaskSuspend(_mytask);
     isRunning = false;
    }
-   else debug("ARM: Error! No Task found");
+   else debug("ARM: No Task found");
 }
 
 
@@ -80,7 +77,32 @@ void arm::resume(){
   if(isTaskCreated()){
     debugln("ARM: Resuming task on arm: "+ String(arm_no));
     _colPointer = 0;     // set column pointer back to zero
-    //vTaskResume(NULL);
+    vTaskResume(_mytask);
   }
-  else debugln("ARM: Error! No Task found");
+  else debugln("ARM: No Task found");
 }
+
+void setArmData(uint8_t** buf, int newlen){
+  // first we stop the arms
+  debugln("Stopping arms");
+  arm1.stop();
+  arm2.stop();
+
+  // then we clear the current buffers
+  debugln("Freeing old memory");
+  for(int i=0; i<arm::_noColumns; i++){
+    free(arm::_imgData[i]);
+  }
+
+  // copy new data
+  arm::_imgData = (uint8_t**)malloc( sizeof(uint8_t*)*newlen);
+  for(int i=0; i<newlen; i++){
+    arm::_imgData[i] = (uint8_t*)malloc(sColumn);
+    memcpy(arm::_imgData[i], buf[i], sColumn);
+  }
+
+  arm::_noColumns = newlen;
+  
+  debugln("New Data copied to arm buffers");
+}
+

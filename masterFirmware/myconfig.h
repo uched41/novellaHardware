@@ -15,10 +15,9 @@ extern bool canPlay;
 #define IMAGE_LENGTH    150
 #define IMAGE_HEIGHT    LED_COUNT
 #define MAX_BRIGHTNESS  20
+#define sColumn     IMAGE_HEIGHT*3            // size of one column array
 
 // Pin configurations
-//#define triggerPin1    25
-//#define triggerPin2    33
 #define LDR_PIN         4     // anolog pin for light sensor
 #define SLAVE1_TX       2     // pins for serial communication with slave
 #define SLAVE1_RX       15
@@ -39,8 +38,6 @@ extern bool canPlay;
 
 #define hallSensor1     25    // Trigger pin for arm1, To be connected to HALL SENSOR 1
 #define hallSensor2     26    // Trigger pin for arm2, To be connected to HALL SENSOR 2
-//#define SLAVE2_TX      21
-//#define SLAVE2_RX      22
 
 // Debug setup
 #define myBaudRate    115200

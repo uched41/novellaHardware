@@ -8,13 +8,9 @@ uint8_t msgSignal[8]   = {0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A };
 uint8_t dataSignal[8]  = {0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA };
 uint8_t readySignal[8] = {0xEC, 0xEC, 0xEC, 0xEC, 0xEC, 0xEC, 0xEC, 0xEC };
 
-uint16_t noColumns = 0;
-
 uint8_t* slave::columnBuf = NULL;          // Buffer for columns
 uint8_t* slave::tempBuf = NULL;            // Temporary Buffer for storing
 uint16_t slave::tempCrc = 0;
-uint8_t slave::tcount = 0;
-bool slave::res = false;
 
 slave::slave(uint8_t tx, uint8_t rx, uint8_t serInstance){
    debugln("Initializing slave " + String(serInstance));
@@ -27,25 +23,21 @@ slave::slave(uint8_t tx, uint8_t rx, uint8_t serInstance){
 
    mySerial = new HardwareSerial(serInstance);
    mySerial->begin(myBaudRate, SERIAL_8N1, rx, tx);
+   while(!(*mySerial));     // wait until serial is ready
    mySerial->setTimeout(2000);
 }
 
-/*void slave::triggerAction(){
-  debug("Init: Triggering slave");
-  digitalWrite(triggerPin, LOW);
-  digitalWrite(triggerPin, HIGH);
-}*/
 
-// Function to attempt sending data to slave a couple of times. This is necessary because errors can occur in serial communication
+// Function to attempt sending data to slave a couple of times.
+// This is necessary because errors can occur in serial communication
 bool slave::attemptSend(){
-  tcount=0;
-  res = false;
+  int tcount = 0;
+  bool res = false;
   while( (tcount++<NO_TRIALS) && (!res) ){
     res = sendData();
   }
   if(res){
     debugln("OK: Data sent to slave" + String(serialInstance));
-    //triggerAction();  // trigger slave to start
     return true;
   }
   else{
@@ -53,6 +45,7 @@ bool slave::attemptSend(){
     return false;
   }
 }
+
 
 // function to send a message ( not data ) to slave, e.g config message.
 bool slave::sendMsg(char* msg, int len){
@@ -67,17 +60,18 @@ bool slave::sendMsg(char* msg, int len){
   msgSignal[6] = (uint8_t)((tempCrc&0xff00)>>8);   // add crc to back of message
   msgSignal[7] = (uint8_t)(tempCrc&0x00ff);
   sendBuf((uint8_t*)msgSignal, buflen(msgSignal));  // send message
+  
   // wait for slave to be ready
   if( !waitForData(tempBuf, buflen(readySignal)) ) {
     errorHandler("ERROR: Slave not responding"); return 0;
-    }
+  }
 
   if( !isEqual(tempBuf, (uint8_t*)readySignal, buflen(readySignal) ) ) {
     errorHandler("ERROR: Wrong response");  return 0;
-    }
+  }
 
   debugln("COMM: Slave responded.");
-  debugln("COMM: Sending config file.");
+  debugln("COMM: Sending message.");
 
   uint8_t tbuf[len+2];
   memcpy(tbuf, (uint8_t*)msg, len);   // copy message into temp buffer
@@ -88,6 +82,7 @@ bool slave::sendMsg(char* msg, int len){
   sendBuf(tbuf, len+2);   // send message
 }
 
+
 // Function to send image data to slave
 bool slave::sendData()
 {
@@ -96,8 +91,8 @@ bool slave::sendData()
   debugln("COMM: Sending Initialization signal");
 
   // generate message to send
-  dataSignal[4] = (uint8_t)((noColumns&0xff00)>>8);
-  dataSignal[5] = (uint8_t)(noColumns&0x00ff);
+  dataSignal[4] = (uint8_t)( ( dataStore._noColumns & 0xff00 ) >> 8 );
+  dataSignal[5] = (uint8_t)( dataStore._noColumns & 0x00ff );
   tempCrc = crc(dataSignal, 6);
   dataSignal[6] = (uint8_t)((tempCrc&0xff00)>>8);   // add crc to back of message
   dataSignal[7] = (uint8_t)(tempCrc&0x00ff);
@@ -111,9 +106,9 @@ bool slave::sendData()
   debugln("COMM: Slave responded");
 
   // Start sending columns
-  for(uint16_t it=0; it<noColumns; it++)
+  for(uint16_t it=0; it<dataStore._noColumns; it++)
   {
-    memcpy(columnBuf, dataStore[it], sColumn );
+    memcpy(columnBuf, dataStore._buffer[it], sColumn );
     tempCrc = crc(columnBuf, sColumn);
     columnBuf[ sColumn ] = (uint8_t)( (tempCrc&0xff00)>>8);    // append crc to last 2 bytes of array
     columnBuf[ sColumn+1 ] = (uint8_t)( tempCrc&0x00ff);
@@ -133,6 +128,7 @@ bool slave::sendData()
   return 1;
 }
 
+
 // Low level function to send buffer
 void slave::sendBuf(uint8_t* buf, uint16_t len)
 {
@@ -140,12 +136,9 @@ void slave::sendBuf(uint8_t* buf, uint16_t len)
   {
     mySerial->write(buf[i]);
   }
-<<<<<<< HEAD
   mySerial->flush();    // wait for transmission of outgoing serial data to complete
-=======
-  mySerial->flush();
->>>>>>> refs/remotes/origin/master
 }
+
 
 // function to wait for and receive data from slave
 bool slave::waitForData(uint8_t* buf, uint16_t len)

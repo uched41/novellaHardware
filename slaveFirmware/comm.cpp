@@ -5,7 +5,6 @@
 #include <ArduinoJson.h>
 
 #define buflen(c) sizeof(c)/sizeof(c[0])
-#define sColumn   IMAGE_HEIGHT*3           // size of one column array
 
 // definitions and variables for serial communication
 HardwareSerial slave1(1);
@@ -16,17 +15,13 @@ const uint8_t msgSignal[]   = {0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A };
 const uint8_t dataSignal[]  = {0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA, 0xDA };
 const uint8_t readySignal[] = {0xEC, 0xEC, 0xEC, 0xEC, 0xEC, 0xEC, 0xEC, 0xEC };
 
-uint8_t **dataStore;   // array of pointers to store the data. Allocated dynamically
-
-volatile uint16_t noColumns = 0;
 uint8_t* columnBuf;         // Buffer for columns
 uint8_t* tempBuf;           // Temporary Buffer for storing
 
-extern arm arm1;
-extern arm arm2;
-
 uint8_t brightnessMode = 0;
 uint8_t brightnessVal = 1;
+
+DataBuffer dataStore(sColumn);         // Data storer object
 
 /*
  * Initialize Communication
@@ -98,7 +93,8 @@ void commParser()
     Parse Data message
   */
   if( !isEqual(tempBuf, (uint8_t*)dataSignal, 4 ) ){
-    debug("ERROR: Wrong starting sequence"); serClear(); return ;
+    debug("ERROR: Wrong starting sequence"); 
+    serClear(); return ;
   }
   debug("OK: Received Starting Sequence.");
 
@@ -110,7 +106,10 @@ void commParser()
   //serClear();
   uint16_t noCols = tempBuf[4]<<8 | tempBuf[5];
 
-  uint8_t **dataStoreBckup = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );  // allocating new backup buffers
+  DataBuffer dataStoreBckup(sColumn);
+  dataStoreBckup._noColumns = noCols;
+  
+  dataStoreBckup._buffer = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );  // allocating new backup buffers
   uint8_t* col = (uint8_t*)malloc( sColumn + 2);
 
   uint16_t count=0;   // read all the columns
@@ -128,8 +127,8 @@ void commParser()
     if(!checkCrc(col, sColumn+2))
       goto freeBackup;      // free allocated memory before exiting
 
-    dataStoreBckup[count] = (uint8_t*)malloc( sColumn);
-    memcpy( dataStoreBckup[count], col, sColumn );
+    dataStoreBckup._buffer[count] = (uint8_t*)malloc( sColumn);
+    memcpy( dataStoreBckup._buffer[count], col, sColumn );
 
     sendBuf(col+sColumn, 2);    // reply to reply with crc of msg
     count++;
@@ -139,33 +138,16 @@ void commParser()
   arm1.stop();          // stop both tasks to avoid memory access collision
   arm2.stop();
 
-  if(noColumns>0){      // free old memory spaces first
-    debug("INIT: Freeing pointers to main buffer");
-    for(uint8_t i=0; i<noColumns; i++){
-      free(dataStore[i]);
-    }
-    //****** NOTE: uncommented today 05-feb, might be possible error.
-    //free(dataStore);
-  }
+  dataStore.clearBuffer();  // claer main buffer
 
-  dataStore = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );
+  dataStore._buffer = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );
 
   debug("INIT: Copying data from backup buffer to main buffer.");
-  for(uint8_t i=0; i<noCols; i++)
-  {
-    dataStore[i] = (uint8_t*)malloc( sColumn);
-    memcpy( dataStore[i], dataStoreBckup[i], sColumn );
-  }
+  dataStore.setBuffer( dataStoreBckup._buffer, noCols);
   debug("OK: Done copying data to main buffer");
 
-  //free(dataStoreBckup);
-
-  noColumns = noCols;
-  debug("Data reception complete");
-
-  arm1.setImage(dataStore);   // set image pointers
-  arm2.setImage(dataStore);
-
+  setArmData(dataStore._buffer, dataStore._noColumns);
+  
   if(arm1.isTaskCreated() && arm2.isTaskCreated()){
     arm1.resume();          // resume task if already created
     arm2.resume();
@@ -176,11 +158,11 @@ void commParser()
   }  
 
 freeBackup:
-  //for(uint8_t i=0; i< noCols; i++){
-    free(dataStoreBckup);
-  //}
+  for(uint8_t i=0; i< count; i++){    // Free only the buffers that have been assigned
+    free(dataStoreBckup._buffer[i]);
+  }
   debug("OK: Done Freeing backup buffers");
-  debug("Num Columns: "); Serial.println(noColumns);
+  debug("Num Columns: "); Serial.println(dataStore._noColumns);
   free(col);
 }
 

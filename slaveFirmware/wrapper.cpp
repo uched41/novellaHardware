@@ -1,9 +1,6 @@
 #include "wrapper.h"
 #include "myconfig.h"
 
-extern arm arm1;
-extern arm arm2;
-
 void setupIsr(){
   // Initialize trigger pin as interrupt to notify us form master
   debug("INIT: Setting up ISRs for arms");
@@ -29,10 +26,10 @@ void Arm2Task(void *pvparameters){
   arm2.showImage();
 }
 
-void createTask(arm* myarm){
+bool createTask(arm* myarm){
   if(myarm->_imgData == NULL){         // make sure that the image data location has been set
     debug("ERROR: Image data not set");
-    return;
+    return false;
   }
 
   if(!myarm->taskCreated){
@@ -46,7 +43,7 @@ void createTask(arm* myarm){
        10000,         /* Stack size in words */
        NULL,          /* Task input parameter */
        0,             /* Priority of the task */
-       myarm->_mytask,       /* Task handle. */
+       &(myarm->_mytask),       /* Task handle. */
        myarm->_core);        /* Core where the task should run */
 
     }
@@ -57,15 +54,15 @@ void createTask(arm* myarm){
        10000,         /* Stack size in words */
        NULL,          /* Task input parameter */
        0,             /* Priority of the task */
-       myarm->_mytask,       /* Task handle. */
+       &(myarm->_mytask),       /* Task handle. */
        myarm->_core);        /* Core where the task should run */
 
     }
-    
+
     myarm->taskCreated = true;
   }
   else{
     debug("Task Already created on arm: "+ String(myarm->arm_no));
   }
+  return true;
 }
-

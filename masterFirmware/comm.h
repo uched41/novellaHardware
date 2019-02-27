@@ -1,12 +1,8 @@
 #ifndef COMM_H
 #define COMM_H
-
-#include "myconfig.h"
 #include "FS.h"
 #include "SPIFFS.h"
-
-#define sColumn     IMAGE_HEIGHT*3            // size of one column array
-extern uint16_t noColumns;
+#include "myconfig.h"
 
 class slave{
   uint8_t txpin;
@@ -14,21 +10,17 @@ class slave{
   uint8_t serialInstance;
   bool isready;
   HardwareSerial* mySerial;
-
   bool sendData();
 
   public:
     static uint8_t* columnBuf;          // Buffer for columns
     static uint8_t* tempBuf;            // Temporary Buffer for storing
     static uint16_t tempCrc;
-    static uint8_t tcount;
-    static bool res;
     static File file;
 
     slave(uint8_t tx, uint8_t rx, uint8_t serInstance);
     bool sendMsg(char* msg, int len);
     bool attemptSend();
-    void triggerAction();
     void sendBuf(uint8_t* buf, uint16_t len);
     void serClear();
     bool waitForData(uint8_t* buf, uint16_t len);

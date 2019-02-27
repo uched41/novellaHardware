@@ -7,8 +7,8 @@
 /*
  * NOTE: Please edit ESP32 core to increase I2C Buffer Size
  */
-arm arm1(HSPI, CLOCK_PIN1, MISO_PIN1, DATA_PIN1, SS_PIN1, IMAGE_HEIGHT);
-arm arm2(VSPI, CLOCK_PIN2, MISO_PIN2, DATA_PIN2, SS_PIN2, IMAGE_HEIGHT);
+arm arm1(HSPI, CLOCK_PIN1, MISO_PIN1, DATA_PIN1, SS_PIN1, IMAGE_HEIGHT, 1);
+arm arm2(VSPI, CLOCK_PIN2, MISO_PIN2, DATA_PIN2, SS_PIN2, IMAGE_HEIGHT, 2);
 
 void setup()
 {
@@ -24,15 +24,8 @@ void setup()
 }
 
 
-void loop()
-{
-  // put your main code here, to run repeatedly:
-  //delay(500);
-  //vTaskDelay(10 / portTICK_PERIOD_MS);
+void loop(){
   commParser();
 }
 
 
-void debug(String c){
-  Serial.println(c);
-}
