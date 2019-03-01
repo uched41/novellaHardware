@@ -54,6 +54,7 @@ void arm::showImage(){
     else{
       leds->clear();
     }
+     vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 

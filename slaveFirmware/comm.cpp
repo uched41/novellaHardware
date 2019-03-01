@@ -53,7 +53,7 @@ void commParser()
     Parse Config message
   */
   if( isEqual(tempBuf, (uint8_t*)msgSignal, 4 ) ){    // check first 4 members of array
-    debug("OK: Received Config message");
+    debugln("OK: Received Config message");
 
     if(!checkCrc(tempBuf, 8))
       return;
@@ -61,7 +61,7 @@ void commParser()
     sendBuf((uint8_t*)readySignal, buflen(readySignal));
 
     if( !waitForData(tempBuf, len) ) {      // wait for the main data
-      debug("ERROR: No length data from master."); serClear(); return;
+      debugln("ERROR: No length data from master."); serClear(); return;
     }
     if(!checkCrc(tempBuf, len))
       return;
@@ -70,20 +70,20 @@ void commParser()
     JsonObject& root = jsonBuffer.parseObject((char*)tempBuf);
     root.prettyPrintTo(debugSerial);
 
-    debug("COMM: Received Config message.");
+    debugln("COMM: Received Config message.");
     if (!root.success()) {
-      debug("COMM: parseObject() failed");
+      debugln("COMM: parseObject() failed");
       return;
     }
 
     if(root.containsKey("Brightness_Control_Mode")){
       brightnessMode = root["brightnessMode"];
-      debug("CONFIG: Brightness Mode set.");
+      debugln("CONFIG: Brightness Mode set.");
     }
 
     if(root.containsKey("Brightness_Value")){
       brightnessVal = root["Brightness_Value"];
-      debug("CONFIG: Brightness Value set.");
+      debugln("CONFIG: Brightness Value set.");
     }
     return;
   }
@@ -93,13 +93,13 @@ void commParser()
     Parse Data message
   */
   if( !isEqual(tempBuf, (uint8_t*)dataSignal, 4 ) ){
-    debug("ERROR: Wrong starting sequence"); 
+    debugln("ERROR: Wrong starting sequence"); 
     serClear(); return ;
   }
   debug("OK: Received Starting Sequence.");
 
   if(!checkCrc(tempBuf, 8)){
-    debug("ERROR: incorrect crc for startign response");
+    debugln("ERROR: incorrect crc for startign response");
     return;
   }
 
@@ -113,14 +113,14 @@ void commParser()
   uint8_t* col = (uint8_t*)malloc( sColumn + 2);
 
   uint16_t count=0;   // read all the columns
-  debug("INIT: Receiving data from master: " ); Serial.println(noCols);
+  debugln("INIT: Receiving data from master: " );
   
   sendBuf((uint8_t*)readySignal, buflen(readySignal));
   
   while(count < noCols)
   {
     if( !waitForData(col, sColumn+2 ) ) {
-      debug("ERROR: No Data received from master"); serClear();
+      debugln("ERROR: No Data received from master"); serClear();
       goto freeBackup;      // free allocated memory before exiting
       }
 
@@ -133,18 +133,15 @@ void commParser()
     sendBuf(col+sColumn, 2);    // reply to reply with crc of msg
     count++;
   }
-  debug("OK: Complete Image data received");
-
-  arm1.stop();          // stop both tasks to avoid memory access collision
-  arm2.stop();
+  debugln("OK: Complete Image data received");
 
   dataStore.clearBuffer();  // claer main buffer
 
   dataStore._buffer = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );
 
-  debug("INIT: Copying data from backup buffer to main buffer.");
+  debugln("INIT: Copying data from backup buffer to main buffer.");
   dataStore.setBuffer( dataStoreBckup._buffer, noCols);
-  debug("OK: Done copying data to main buffer");
+  debugln("OK: Done copying data to main buffer");
 
   setArmData(dataStore._buffer, dataStore._noColumns);
   
@@ -161,7 +158,7 @@ freeBackup:
   for(uint8_t i=0; i< count; i++){    // Free only the buffers that have been assigned
     free(dataStoreBckup._buffer[i]);
   }
-  debug("OK: Done Freeing backup buffers");
+  debugln("OK: Done Freeing backup buffers");
   debug("Num Columns: "); Serial.println(dataStore._noColumns);
   free(col);
 }

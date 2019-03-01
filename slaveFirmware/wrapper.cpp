@@ -34,7 +34,7 @@ bool createTask(arm* myarm){
 
   if(!myarm->taskCreated){
     myarm->_colPointer = 0;     // set column pointer back to zero
-    debug("INIT: Creating task on arm: "+ String(myarm->arm_no));
+    debugln("INIT: Creating task on arm: "+ String(myarm->arm_no));
 
     if(myarm == &arm1){
       xTaskCreatePinnedToCore(
@@ -50,7 +50,7 @@ bool createTask(arm* myarm){
     else{
       xTaskCreatePinnedToCore(
        Arm2Task,     /* Function to implement the task */
-       "Arm1 Display", /* Name of the task */
+       "Arm2 Display", /* Name of the task */
        10000,         /* Stack size in words */
        NULL,          /* Task input parameter */
        0,             /* Priority of the task */

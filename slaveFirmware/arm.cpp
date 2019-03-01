@@ -43,7 +43,6 @@ void arm::setCore(uint8_t core){
 
 void arm::showImage(){
   debugln("INIT: Showing Image on arm: " + String(arm_no));
-  Serial.print("no columns: "); Serial.println(_noColumns);
   while(1){
     isRunning = true;
     if(_colPointer < _noColumns){
@@ -54,6 +53,7 @@ void arm::showImage(){
     else{
       leds->clear();
     }
+    vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 
@@ -69,7 +69,7 @@ void arm::stop(){
     vTaskSuspend(_mytask);
     isRunning = false;
    }
-   else debug("ARM: No Task found");
+   else debugln("ARM: No Task found");
 }
 
 

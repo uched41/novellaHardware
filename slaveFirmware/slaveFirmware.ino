@@ -3,7 +3,7 @@
 #include "comm.h"
 #include "arm.h"
 #include "wrapper.h"
-
+#include "esp_task_wdt.h"
 /*
  * NOTE: Please edit ESP32 core to increase I2C Buffer Size
  */
@@ -26,6 +26,7 @@ void setup()
 
 void loop(){
   commParser();
+  esp_task_wdt_reset();
 }
 
 

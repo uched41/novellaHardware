@@ -50,7 +50,7 @@ bool createTask(arm* myarm){
     else{
       xTaskCreatePinnedToCore(
        Arm2Task,     /* Function to implement the task */
-       "Arm1 Display", /* Name of the task */
+       "Arm2 Display", /* Name of the task */
        10000,         /* Stack size in words */
        NULL,          /* Task input parameter */
        0,             /* Priority of the task */
