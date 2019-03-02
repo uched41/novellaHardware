@@ -16,7 +16,7 @@ volatile bool shouldSaveConfig;
 void networkInit() {
     //Local intialization. Once its business is done, there is no need to keep it around
   WiFiManager wifiManager;
-  //wifiManager.resetSettings();    //reset settings - for testing
+  wifiManager.resetSettings();    //reset settings - for testing
   wifiManager.setSaveConfigCallback(saveConfigCallback);   //set config save notify callback
   debugln("NETWORK: Attempting to connect to wifi...");
   if(!wifiManager.autoConnect(AUTOCONNECT_NAME, AUTOCONNECT_PASSWORD)) {

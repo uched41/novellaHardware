@@ -106,4 +106,3 @@ void setArmData(uint8_t** buf, int newlen){
   
   debugln("New Data copied to arm buffers");
 }
-

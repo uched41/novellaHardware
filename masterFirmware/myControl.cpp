@@ -18,7 +18,7 @@ long lastPingTime = 0;
 
 WiFiClient espClientm;
 PubSubClient mqttclient(espClientm);
-const char* mqtt_server = "192.168.1.125";
+const char* mqtt_server = "192.168.1.109";
 const char* mqtt_output_topic = "novella/devices/lampshade/response";
 const char* mqtt_ping_topic   = "novella/devices/lampshade/ping/";
 char mqtt_input_topic[50];

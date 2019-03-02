@@ -37,6 +37,7 @@ class DataBuffer{
       _buffer = (uint8_t**)malloc( sizeof(uint8_t*)*len );
       for(int i=0; i<len; i++){
         uint8_t* newBuf = (uint8_t*)malloc(_colLength);
+        memcpy(newBuf, buf[i], _colLength);
         _buffer[i] = newBuf;
       }
       _noColumns = len;

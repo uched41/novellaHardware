@@ -135,10 +135,6 @@ void commParser()
   }
   debugln("OK: Complete Image data received");
 
-  dataStore.clearBuffer();  // claer main buffer
-
-  dataStore._buffer = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );
-
   debugln("INIT: Copying data from backup buffer to main buffer.");
   dataStore.setBuffer( dataStoreBckup._buffer, noCols);
   debugln("OK: Done copying data to main buffer");
@@ -204,7 +200,7 @@ void dumpBuf(uint8_t *data, uint16_t length)
      Serial.print(data[i],HEX);
      Serial.print(" ");
    }
-   debug(" ");
+   debugln(" ");
 }
 
 // send buffer

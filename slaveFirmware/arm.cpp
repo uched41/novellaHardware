@@ -43,6 +43,7 @@ void arm::setCore(uint8_t core){
 
 void arm::showImage(){
   debugln("INIT: Showing Image on arm: " + String(arm_no));
+  Serial.print("no columns: "); Serial.println(_noColumns);
   while(1){
     isRunning = true;
     if(_colPointer < _noColumns){
@@ -105,4 +106,3 @@ void setArmData(uint8_t** buf, int newlen){
   
   debugln("New Data copied to arm buffers");
 }
-
