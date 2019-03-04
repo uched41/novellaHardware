@@ -51,22 +51,18 @@ void ledDriver::endFrame(uint8_t count){
   }
 }
 
-void ledDriver::sendColor(CRGB col, uint8_t brightness){
-  _myspi.transfer(0b11100000 | brightness);
-  _myspi.transfer(col.b / 8 );
-  _myspi.transfer(col.g / 8 );
-  _myspi.transfer(col.r / 8 );
+void ledDriver::sendColor(CRGB col){
+  _myspi.transfer(0b11100000 | mySettings.brightnessRaw);   // global brightness
+  _myspi.transfer(col.b);
+  _myspi.transfer(col.g);
+  _myspi.transfer(col.r);
 }
 
-void ledDriver::show()
-{
-  
+void ledDriver::show(){
   startFrame();
-
   for(uint8_t i=0; i<_length; i++){
-    sendColor(_buffer[i], 31);     // where 1 is brightness level
+    sendColor(_buffer[i]);   
   }
-
   endFrame(_length);
 }
 
@@ -74,7 +70,7 @@ void ledDriver::clear(){
   startFrame();
   CRGB val = {0, 0, 0};
   for(uint8_t i=0; i<_length; i++){
-    sendColor(val, 31);     // where 1 is brightness level
+    sendColor(val);    
   }
 
   endFrame(_length);

@@ -2,9 +2,7 @@
 #include "arm.h"
 #include "wrapper.h"
 #include "comm.h"
-
-int delayBetweenColumns = 1000;    // in microseconds
-int delayBetweenImages  = 1000;    // in microseconds
+#include "myControl.h" 
 
 uint8_t** arm::_imgData = NULL;
 int arm::_noColumns = 0;
@@ -49,7 +47,7 @@ void arm::showImage(){
     if(_colPointer < _noColumns){
       showColumn( _imgData[_colPointer] );        // show the next column
       _colPointer   = (_colPointer + 1);          // increment the column pointer and make sure that we dont exceed the maximum
-      delayMicroseconds(delayBetweenColumns);
+      delayMicroseconds(mySettings.delayBtwColumns);
     }
     else{
       leds->clear();

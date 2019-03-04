@@ -45,7 +45,7 @@ void myInit(){
       debugln("INIT: SPIFFS Mount Failed");
       return;
   }
-  getConfig();  // get configuration
+  //getConfig();  // get configuration
 }
 
 // Initialize the slave part of our master

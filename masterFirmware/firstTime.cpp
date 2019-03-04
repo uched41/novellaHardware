@@ -100,8 +100,8 @@ void getConfig(){
     return;
   }
   root.prettyPrintTo(debugSerial);
-  brightnessMode = root["Brightness_Control_Mode"];
-  brightnessVal  = root["Brightness_Value"];
+  /*brightnessMode = root["Brightness_Control_Mode"];
+  brightnessVal  = root["Brightness_Value"];*/
 }
 
 // Save configuration values back to config file
@@ -114,9 +114,9 @@ void saveConfig(){
     return;
   }
 
-  root.prettyPrintTo(debugSerial);
+  /*root.prettyPrintTo(debugSerial);
   root["Brightness_Control_Mode"] = brightnessMode;
-  root["Brightness_Value"]        = brightnessVal;
+  root["Brightness_Value"]        = brightnessVal;*/
   free(myConfigData);
   int len = root.measureLength() + 1;
   myConfigData = (char*)malloc(len);    // Allocate memory for array

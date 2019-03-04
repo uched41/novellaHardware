@@ -22,6 +22,7 @@ uint8_t brightnessMode = 0;
 uint8_t brightnessVal = 1;
 
 DataBuffer dataStore(sColumn);         // Data storer object
+Settings mySettings;                   // Initialize settings object
 
 /*
  * Initialize Communication
@@ -75,16 +76,48 @@ void commParser()
       debugln("COMM: parseObject() failed");
       return;
     }
+    else debugln("COMM: Json parsing success");
+    
+    if (root.containsKey("command")){
+      String cmd = root["command"];
 
-    if(root.containsKey("Brightness_Control_Mode")){
-      brightnessMode = root["brightnessMode"];
-      debugln("CONFIG: Brightness Mode set.");
-    }
+        // set brightness mode 
+        if(cmd == "Brightness_Mode"){
+        String temp = root["value"];
+        int val = temp.toInt();
 
-    if(root.containsKey("Brightness_Value")){
-      brightnessVal = root["Brightness_Value"];
-      debugln("CONFIG: Brightness Value set.");
+        if(val == 0){
+          debugln("Setting brightness mode to manual");
+          mySettings.brighnessMode = 0;
+        }
+        else if(val == 1){
+          debugln("Setting brightness mode to automatic");
+          mySettings.brighnessMode = 1;
+        }
+        debugln("CONFIG: Brightness Mode set.");
+        return;
+      }
+
+      // set brightness value
+      if(cmd == "Brightness"){
+        String temp = root["value"];
+        int val = temp.toInt();
+        debug("MQTT: Setting brightness value: "); debugln(val);
+        mySettings.setBrightness(val);
+        debugln("CONFIG: Brightness Value set.");
+        return;
+      }
+
+      // set column delay
+      if(cmd == "Column_Delay"){
+        String temp = root["Column_Delay"];
+        int val = temp.toInt();
+        debug("MQTT: Setting delay between columns: "); debugln(val);
+        mySettings.delayBtwColumns = val;
+        return;
+      }
     }
+        
     return;
   }
 

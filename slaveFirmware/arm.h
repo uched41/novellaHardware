@@ -3,9 +3,6 @@
 
 #include "led_driver.h"
 
-extern int delayBetweenColumns;    // in microseconds
-extern int delayBetweenImages;    // in microseconds
-
 class arm{
 
   public:

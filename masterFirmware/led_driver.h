@@ -33,7 +33,7 @@ class ledDriver
       void show();
       void startFrame();
       void endFrame(uint8_t count);
-      void sendColor(CRGB col, uint8_t brightness);
+      void sendColor(CRGB col);
       void refresh();
       void clear();
 };

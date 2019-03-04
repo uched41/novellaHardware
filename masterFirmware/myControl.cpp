@@ -11,9 +11,6 @@
 #include "arm.h"
 #include "wrapper.h"
 
-uint8_t brightnessMode = 0;
-uint8_t brightnessVal = 4;
-
 long lastPingTime = 0;
 
 WiFiClient espClientm;
@@ -31,7 +28,8 @@ int FILE_BUF_SIZE = 512;    // must correlate with mqtt buf size
 File mqttFile;
 
 DataBuffer dataStore(sColumn);         // Data storer object
-
+Settings mySettings;                   // Initialize settings object
+  
 // function to initiialize mqtt
 void mqttInit(void){
   debugln("MQTT: Initilializing mqtt");
@@ -61,6 +59,7 @@ void mqttInit(void){
 
 // Call back function to process received data
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
+  bool sendToSlave = false;
   debug("MQTT: Message arrived [");  debug(topic); debugln("] ");
   printArray((char*)payload, length);
 
@@ -131,6 +130,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         createTask(&arm1);          // Create task if not already created
         createTask(&arm2);
       }  
+    }
+
+     // Command to Delete bin file
+    else if(cmd == "Delete_Bin"){
+      const char* dFile = root["file"];
+      if(SPIFFS.exists(dFile)){             // Delete file if it already exists
+        debugln("MQTT: File found, deleting...");
+        SPIFFS.remove(dFile);
+      }
+      else debugln("MQTT: File to be deleted not found");
+      
+      mqttReply("OK");
       return;
     }
 
@@ -160,6 +171,49 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       files.toCharArray(tem3, files.length()+1);
       mqttReply(tem3);
       free(tem3);
+    }
+
+    // Command to set brightness mode
+    else if(cmd == "Brightness_Mode"){
+      String temp = root["value"];
+      debugln("MQTT: Setting brightness mode");
+      int val = temp.toInt();
+
+      if(val == 0){
+        debugln("Setting brightness mode to manual");
+        mySettings.brighnessMode = 0;
+      }
+      else if(val == 1){
+        debugln("Setting brightness mode to automatic");
+        mySettings.brighnessMode = 1;
+      }
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+
+    // Command to set brightness value
+    else if(cmd == "Brightness"){
+      String temp = root["value"];
+      int val = temp.toInt();
+      debug("MQTT: Setting brightness value: "); debugln(val);
+      mySettings.setBrightness(val);
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+
+    // Command to delay between column
+    else if(cmd == "Column_Delay"){
+      String temp = root["value"];
+      int val = temp.toInt();
+      debug("MQTT: Setting delay between columns: "); debugln(val);
+      mySettings.delayBtwColumns = val;
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+
+    // forward message to slave if needed
+    if(sendToSlave){
+      slave1.sendMsg((char*)payload, length);
     }
     
     return ;
@@ -225,7 +279,7 @@ void mqttReply(char* msg){
 
 // Brightness control
 void brightnessControl(void){
-  if(brightnessMode==1){   // Automatic mode will read from ldr sensor
+  /*if(brightnessMode==1){   // Automatic mode will read from ldr sensor
       brightnessVal = map(analogRead(LDR_PIN), 0, 1023, MAX_BRIGHTNESS, 0);
-  }
+  }*/
 }

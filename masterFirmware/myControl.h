@@ -7,10 +7,24 @@
 #define MQTT_BASE_TOPIC "novella/devices"
 #define MQTT_PING_INTERVAL 10000  //  in milliseconds
 
-extern uint8_t brightnessMode;
-extern uint8_t brightnessVal;
-
 #define STATUS_FLASH_INTERVAL   200   // interval in millis when flashing status led
+
+// Settings object
+class Settings{
+  public:
+    uint8_t brighnessMode = 0;  // 0 = manual, 1, automatic
+    uint8_t brightnessPercent = 0;  // value of brightness in percentage
+    uint8_t brightnessRaw = 0;  // brightness value on 1 - 32 scale
+
+    long delayBtwColumns = 0;
+   
+    void setBrightness(uint8_t val){
+      brightnessPercent = val;
+      brightnessRaw = map(val, 0, 100, 1, 31);
+    }
+};
+
+extern Settings mySettings;
 
 // Buffer object type
 class DataBuffer{

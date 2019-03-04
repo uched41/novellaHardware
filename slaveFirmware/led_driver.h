@@ -1,7 +1,11 @@
 #ifndef LED_DRIVER_H
 #define LED_DRIVER_H
 
-#include "myconfig.h"
+#include <Arduino.h>
+#include <memory>
+#include <cassert>
+#include <stdio.h>
+#include <SPI.h>
 
 // structure for storing color
 typedef struct
@@ -29,7 +33,7 @@ class ledDriver
       void show();
       void startFrame();
       void endFrame(uint8_t count);
-      void sendColor(CRGB col, uint8_t brightness);
+      void sendColor(CRGB col);
       void refresh();
       void clear();
 };
