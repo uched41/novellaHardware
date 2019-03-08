@@ -24,6 +24,7 @@ class slave{
     void sendBuf(uint8_t* buf, uint16_t len);
     void serClear();
     bool waitForData(uint8_t* buf, uint16_t len);
+    bool attempMsg(char* msg, int len);
 };
 
 // Declare slave

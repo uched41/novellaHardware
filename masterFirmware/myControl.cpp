@@ -62,7 +62,9 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   bool sendToSlave = false;
   debug("MQTT: Message arrived [");  debug(topic); debugln("] ");
   printArray((char*)payload, length);
-
+  char* sBuf[length];
+  memcpy(sBuf, payload, length);
+  
   String tstring = String(topic);
   DynamicJsonBuffer  jsonBuffer(200);     // Config messages will be sent as Json
   JsonObject& root = (tstring.indexOf("mid") == -1) ? jsonBuffer.parseObject(payload) : jsonBuffer.createObject();
@@ -213,7 +215,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     // forward message to slave if needed
     if(sendToSlave){
-      slave1.sendMsg((char*)payload, length);
+      slave1.attempMsg((char*)sBuf, length);
     }
     
     return ;

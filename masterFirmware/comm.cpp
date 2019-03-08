@@ -47,6 +47,23 @@ bool slave::attemptSend(){
 }
 
 
+// Attempt to send message
+bool slave::attempMsg(char* msg, int len){
+  int tcount = 0;
+  bool res = false;
+  while( (tcount++<NO_TRIALS) && (!res) ){
+    res = sendMsg( msg, len);
+  }
+  if(res){
+    debugln("OK: Data sent to slave" + String(serialInstance));
+    return true;
+  }
+  else{
+    errorHandler("ERROR: Failed to send data to slave ");
+    return false;
+  }
+}
+
 // function to send a message ( not data ) to slave, e.g config message.
 bool slave::sendMsg(char* msg, int len){
   // msg will be sent in json format
@@ -80,6 +97,8 @@ bool slave::sendMsg(char* msg, int len){
   tbuf[len+1] = (uint8_t)(tempCrc&0x00ff);
 
   sendBuf(tbuf, len+2);   // send message
+
+  return true;
 }
 
 

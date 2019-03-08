@@ -28,8 +28,9 @@ void IRAM_ATTR arm::execIsr(){
 void arm::showColumn(uint8_t* buf){
     portENTER_CRITICAL_ISR(&mux);     // mutex will prevent 2 cores from accessing memory at the same time
     leds->setBuffer(buf, _len);
-    portEXIT_CRITICAL_ISR(&mux);
     leds->show();
+    portEXIT_CRITICAL_ISR(&mux);
+    
 }
 
 
@@ -51,7 +52,7 @@ void arm::showImage(){
     else{
       leds->clear();
     }
-     vTaskDelay(10 / portTICK_PERIOD_MS);
+    // vTaskDelay(10 / portTICK_PERIOD_MS);
   }
 }
 

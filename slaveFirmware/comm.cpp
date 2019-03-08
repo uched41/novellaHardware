@@ -61,14 +61,17 @@ void commParser()
     uint16_t len = tempBuf[4]<<8 | tempBuf[5];
     sendBuf((uint8_t*)readySignal, buflen(readySignal));
 
-    if( !waitForData(tempBuf, len) ) {      // wait for the main data
+    if( !waitForData(tempBuf, len+2) ) {      // wait for the main data
       debugln("ERROR: No length data from master."); serClear(); return;
     }
-    if(!checkCrc(tempBuf, len))
+    if(!checkCrc(tempBuf, len+2))
       return;
 
+    char* b2 [len];
+    memcpy(b2, tempBuf, len);
+    Serial.println((char*)b2);
     DynamicJsonBuffer  jsonBuffer(200);     // Config messages will be sent as Json
-    JsonObject& root = jsonBuffer.parseObject((char*)tempBuf);
+    JsonObject& root = jsonBuffer.parseObject((char*)b2);
     root.prettyPrintTo(debugSerial);
 
     debugln("COMM: Received Config message.");

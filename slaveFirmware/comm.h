@@ -7,10 +7,10 @@
 class Settings{
   public:
     uint8_t brighnessMode = 0;  // 0 = manual, 1, automatic
-    uint8_t brightnessPercent = 0;  // value of brightness in percentage
-    uint8_t brightnessRaw = 0;  // brightness value on 1 - 32 scale
+    uint8_t brightnessPercent = 50;  // value of brightness in percentage
+    uint8_t brightnessRaw = 16;  // brightness value on 1 - 32 scale
 
-    long delayBtwColumns = 0;
+    int delayBtwColumns = 0;
    
     void setBrightness(uint8_t val){
       brightnessPercent = val;

@@ -26,7 +26,8 @@ void setup()
 
 void loop(){
   commParser();
-  esp_task_wdt_reset();
+  delay(5);
+  //esp_task_wdt_reset();
 }
 
 

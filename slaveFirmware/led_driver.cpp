@@ -13,6 +13,7 @@ ledDriver::ledDriver(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t da
 void ledDriver::begin(uint16_t length1)
 {
   _length = length1;
+  _myspi.setFrequency(40000000);
   _myspi.begin(_clkPin, _misoPin, _dataPin, _ssPin);  // start spi connection
   _buffer =(CRGB*) malloc(sizeof(CRGB)*_length);
 }
