@@ -86,39 +86,48 @@ void commParser()
 
         // set brightness mode 
         if(cmd == "Brightness_Mode"){
-        String temp = root["value"];
-        int val = temp.toInt();
-
-        if(val == 0){
-          debugln("Setting brightness mode to manual");
-          mySettings.brighnessMode = 0;
-        }
-        else if(val == 1){
-          debugln("Setting brightness mode to automatic");
-          mySettings.brighnessMode = 1;
-        }
-        debugln("CONFIG: Brightness Mode set.");
-        return;
-      }
+          String temp = root["value"];
+          int val = temp.toInt();
+  
+          if(val == 0){
+            debugln("Setting brightness mode to manual");
+            mySettings.brighnessMode = 0;
+          }
+          else if(val == 1){
+            debugln("Setting brightness mode to automatic");
+            mySettings.brighnessMode = 1;
+          }
+          debugln("CONFIG: Brightness Mode set.");
+          return;
+       }
 
       // set brightness value
-      if(cmd == "Brightness"){
+      else if(cmd == "Brightness"){
         String temp = root["value"];
         int val = temp.toInt();
-        debug("MQTT: Setting brightness value: "); debugln(val);
+        debugln("MQTT: Setting brightness value: "); debugln(val);
         mySettings.setBrightness(val);
         debugln("CONFIG: Brightness Value set.");
         return;
       }
 
       // set column delay
-      if(cmd == "Column_Delay"){
-        String temp = root["Column_Delay"];
+      else if(cmd == "Column_Delay"){
+        String temp = root["value"];
         int val = temp.toInt();
-        debug("MQTT: Setting delay between columns: "); debugln(val);
+        debugln("MQTT: Setting delay between columns: "); debugln(val);
         mySettings.delayBtwColumns = val;
         return;
       }
+
+      
+      else if(cmd == "Saved_Data"){
+        debugln("MQTT: Receiving saved settings");
+        mySettings.delayBtwColumns = root["Delay_Columns"];
+        mySettings.setBrightness(root["Brightness"]);
+        mySettings.brighnessMode = root["Brightness_Mode"];
+     }
+    
     }
         
     return;

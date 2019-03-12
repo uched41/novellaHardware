@@ -108,30 +108,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
         return;
       }
       const char* dispFile = root["file"];
-      debugln("MQTT: Starting Image, " + String(dispFile));
-      dataStore.setBuffer((char*)dispFile);   // copy data from file into buffer
-
-      arm1.stop();
-      arm2.stop();
-      
-      if(!slave1.attemptSend()){   // send to slave1
-        debugln("MQTT: Unable to send to slave");
-        mqttReply("Error");
-        return;
+      bool ans = startImage(dispFile);
+      if(ans){
+        mqttReply("Success");
       }
-      
-      debugln("MQTT: Data sent to slave");
-      mqttReply("OK");
-      setArmData(dataStore._buffer, dataStore._noColumns);
-    
-     if(arm1.isTaskCreated() && arm2.isTaskCreated()){
-        arm1.resume();          // resume task if already created
-        arm2.resume();
-      }
-      else{
-        createTask(&arm1);          // Create task if not already created
-        createTask(&arm2);
-      }  
+      else mqttReply("Failed");      
     }
 
      // Command to Delete bin file
@@ -213,6 +194,22 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       sendToSlave = true;
     }
 
+    else if(cmd == "Saved_Data"){
+      debugln("MQTT: Receiving saved settings");
+      mySettings.delayBtwColumns = root["Delay_Columns"];
+      mySettings.setBrightness(root["Brightness"]);
+      mySettings.brighnessMode = root["Brightness_Mode"];
+      sendToSlave = true;
+       
+      const char* img = root["image"];
+      bool ans = startImage(img);
+      if(ans){
+        mqttReply("Success");
+      }
+      else mqttReply("Failed"); 
+    }
+
+    
     // forward message to slave if needed
     if(sendToSlave){
       slave1.attempMsg((char*)sBuf, length);
@@ -277,6 +274,35 @@ void mqttReply(char* msg){
   
   mqttclient.publish(mqtt_output_topic, temp1);
   free(temp1);
+}
+
+// Function to start displaying image
+bool startImage(const char* img){
+  debugln("Starting Image, " + String(img));
+  dataStore.setBuffer((char*)img);   // copy data from file into buffer
+  arm1.stop();
+  arm2.stop();
+  
+  if(!slave1.attemptSend()){   // send to slave1
+    debugln("MQTT: Unable to send to slave");
+    mqttReply("Error");
+    return 0;
+  }
+  
+  debugln("Data sent to slave");
+  mqttReply("OK");
+  setArmData(dataStore._buffer, dataStore._noColumns);
+
+ if(arm1.isTaskCreated() && arm2.isTaskCreated()){
+    arm1.resume();          // resume task if already created
+    arm2.resume();
+  }
+  else{
+    createTask(&arm1);          // Create task if not already created
+    createTask(&arm2);
+  }  
+  debugln("Image display started");
+  return 1;
 }
 
 // Brightness control

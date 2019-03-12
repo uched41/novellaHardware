@@ -16,7 +16,7 @@ class Settings{
     uint8_t brightnessPercent = 50;  // value of brightness in percentage
     uint8_t brightnessRaw = 16;  // brightness value on 1 - 32 scale
 
-    int delayBtwColumns = 0;
+    int delayBtwColumns = 50;
    
     void setBrightness(uint8_t val){
       brightnessPercent = val;
@@ -142,5 +142,6 @@ void mqttLoop();
 void mqttReply(char* msg);
 void mqttPing();
 void splitData(char* filename);
+bool startImage(const char* img);
 
 #endif

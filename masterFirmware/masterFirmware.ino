@@ -19,8 +19,7 @@ arm arm2(VSPI, CLOCK_PIN2, MISO_PIN2, DATA_PIN2, SS_PIN2, IMAGE_HEIGHT, 2);
 StatusLed statusLed(RED_LED, GREEN_LED, BLUE_LED);
 
 
-void setup()
-{
+void setup(){
   myInit();          // Initialization
   networkInit();
   mqttInit();
@@ -30,9 +29,7 @@ void setup()
 }
 
 
-void loop()
-{
-  // put your main code here, to run repeatedly:
+void loop(){
   delay(5);
   mqttLoop();
 }
@@ -45,7 +42,7 @@ void myInit(){
       debugln("INIT: SPIFFS Mount Failed");
       return;
   }
-  //getConfig();  // get configuration
+    
 }
 
 // Initialize the slave part of our master
