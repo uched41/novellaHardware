@@ -18,6 +18,8 @@ PubSubClient mqttclient(espClientm);
 const char* mqtt_server = "192.168.1.109";
 const char* mqtt_output_topic = "novella/devices/lampshade/response";
 const char* mqtt_ping_topic   = "novella/devices/lampshade/ping/";
+const char* mqtt_command_topic   = "novella/devices/lampshade/command/";
+
 char mqtt_input_topic[50];
 char deviceID[18];
 String devID = " ";
@@ -85,7 +87,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       }
       mqttFile = SPIFFS.open(filen, FILE_WRITE);
       if(!mqttFile){
-        debugln("Error opening file");
+        errorHandler("Error opening file");
       }
       mqttReply("OK");
     }
@@ -93,6 +95,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       debugln("MQTT: File Complete.");
       mqttFile.close();
       mqttReply("OK");
+      statusLed.flashGreen(4);
     }
     return ;
   }
@@ -112,7 +115,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       if(ans){
         mqttReply("Success");
       }
-      else mqttReply("Failed");      
+      else {
+        mqttReply("Failed");  
+        errorHandler("Error starting display");    
+      }
     }
 
      // Command to Delete bin file
@@ -164,11 +170,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
       if(val == 0){
         debugln("Setting brightness mode to manual");
-        mySettings.brighnessMode = 0;
+        mySettings.brightnessMode = 0;
       }
       else if(val == 1){
         debugln("Setting brightness mode to automatic");
-        mySettings.brighnessMode = 1;
+        mySettings.brightnessMode = 1;
       }
       mqttReply("OK");
       sendToSlave = true;
@@ -198,7 +204,11 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       debugln("MQTT: Receiving saved settings");
       mySettings.delayBtwColumns = root["Delay_Columns"];
       mySettings.setBrightness(root["Brightness"]);
-      mySettings.brighnessMode = root["Brightness_Mode"];
+      mySettings.brightnessMode = root["Brightness_Mode"];
+
+      mySettings.isPaired = 1;
+      statusLed.off();
+      
       sendToSlave = true;
        
       const char* img = root["image"];
@@ -206,7 +216,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       if(ans){
         mqttReply("Success");
       }
-      else mqttReply("Failed"); 
+      else {
+        mqttReply("Failed"); 
+        errorHandler("Error starting image");
+      }
     }
 
     
@@ -227,13 +240,12 @@ void mqttReconnect() {
     if (mqttclient.connect(deviceID)) {     // Attempt to connect
       debugln("MQTT: connected");
       mqttclient.subscribe(mqtt_input_topic);
-      //mqttReply((char*)"OK");
+      statusLed.flashGreen(4);
       return;
     } else {
       debug("failed, rc=");
       debug(mqttclient.state());
-      debugln(" try again in 2 seconds");
-      statusLed.flashGreen();
+      errorHandler(" try again in 2 seconds");
       delay(1000);      // Wait 5 seconds before retrying
     }
   }
@@ -276,13 +288,29 @@ void mqttReply(char* msg){
   free(temp1);
 }
 
+// mqtt command
+void mqttCommand(char* msg){
+  DynamicJsonBuffer  jsonBuffer(300);
+  JsonObject& root = jsonBuffer.createObject();
+  root["id"] = devID;
+  root["command"] = String(msg);
+  char* temp1;
+  temp1 = (char*)malloc(root.measureLength()+1);
+  root.printTo(temp1, root.measureLength()+1);
+  debug("MQTT Command: "); debugln(temp1);
+  
+  mqttclient.publish(mqtt_command_topic, temp1);
+  free(temp1);
+}
+
 // Function to start displaying image
 bool startImage(const char* img){
   debugln("Starting Image, " + String(img));
   dataStore.setBuffer((char*)img);   // copy data from file into buffer
   arm1.stop();
   arm2.stop();
-  
+
+  statusLed.flashYellow(2);
   if(!slave1.attemptSend()){   // send to slave1
     debugln("MQTT: Unable to send to slave");
     mqttReply("Error");
@@ -302,12 +330,7 @@ bool startImage(const char* img){
     createTask(&arm2);
   }  
   debugln("Image display started");
+  statusLed.flashBlue(4);
   return 1;
 }
 
-// Brightness control
-void brightnessControl(void){
-  /*if(brightnessMode==1){   // Automatic mode will read from ldr sensor
-      brightnessVal = map(analogRead(LDR_PIN), 0, 1023, MAX_BRIGHTNESS, 0);
-  }*/
-}

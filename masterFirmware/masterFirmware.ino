@@ -18,6 +18,8 @@ arm arm2(VSPI, CLOCK_PIN2, MISO_PIN2, DATA_PIN2, SS_PIN2, IMAGE_HEIGHT, 2);
 // Status leds
 StatusLed statusLed(RED_LED, GREEN_LED, BLUE_LED);
 
+// Reset task
+TaskHandle_t resetTaskHandle;
 
 void setup(){
   myInit();          // Initialization
@@ -42,7 +44,32 @@ void myInit(){
       debugln("INIT: SPIFFS Mount Failed");
       return;
   }
-    
+
+  // set to green until settings does other wise
+  statusLed.green();
+  
+  // Initialize reset pin
+  pinMode(RESET_SWITCH, INPUT_PULLUP);    
+  attachInterrupt(digitalPinToInterrupt(RESET_SWITCH), resetIsr, FALLING );
+}
+
+// Isr to trigger reset task
+void resetIsr(){
+  debugln("Creating reset task");
+  xTaskCreate(resetTask,  "Reset_Task",  2000,  &resetTaskHandle,  1, NULL);
+}
+
+// task to wait for reset pin to be pressed
+void resetTask(void *pvparameters){
+  debugln("Starting reset task");
+  
+  unsigned long duration = millis();
+  while(!digitalRead(RESET_SWITCH));  // Wait until button is released
+  if(millis()-duration > 5000){  // Timeout occured
+    debugln("Resetting lamp");
+    mqttCommand("Reset");
+  }
+  vTaskDelete(resetTaskHandle);
 }
 
 // Initialize the slave part of our master
@@ -63,5 +90,5 @@ void printArray(char* arr, int len){
 // Error handler function
 void errorHandler(char* msg){
   debugln(msg);
-  statusLed.flashRed();
+  statusLed.flashRed(2);
 }

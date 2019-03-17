@@ -12,15 +12,25 @@
 // Settings object
 class Settings{
   public:
-    uint8_t brighnessMode = 0;  // 0 = manual, 1, automatic
+    uint8_t brightnessMode = 0;  // 0 = manual, 1, automatic
     uint8_t brightnessPercent = 50;  // value of brightness in percentage
     uint8_t brightnessRaw = 16;  // brightness value on 1 - 32 scale
-
+    uint8_t isPaired = 0;
+    
     int delayBtwColumns = 50;
    
     void setBrightness(uint8_t val){
       brightnessPercent = val;
       brightnessRaw = map(val, 0, 100, 1, 31);
+    }
+
+    uint8_t getBrightness(){
+      if(brightnessMode == 0){
+        return brightnessRaw;
+      }
+      else if(brightnessMode == 1){
+        return  (uint8_t)map(analogRead(LDR_PIN), 0, 1023, 31, 0);
+      }
     }
 };
 
@@ -96,33 +106,63 @@ class StatusLed{
       pinMode(b, OUTPUT);
     }
 
-    void flashRed() {
+    void red(){
       digitalWrite(r, HIGH);
-      delay(STATUS_FLASH_INTERVAL);
-      digitalWrite(r, LOW);
-      delay(STATUS_FLASH_INTERVAL);
-    }
-
-    void flashGreen() {
-      digitalWrite(g, HIGH);
-      delay(STATUS_FLASH_INTERVAL);
       digitalWrite(g, LOW);
-      delay(STATUS_FLASH_INTERVAL);
-    }
-
-    void flashBlue()  {
-      digitalWrite(b, HIGH);
-      delay(STATUS_FLASH_INTERVAL);
       digitalWrite(b, LOW);
-      delay(STATUS_FLASH_INTERVAL);
     }
 
-    void flashYellow(){
-      digitalWrite(r, HIGH);
+    void green(){
       digitalWrite(g, HIGH);
-      delay(STATUS_FLASH_INTERVAL);
+      digitalWrite(r, LOW);
+      digitalWrite(b, LOW);
+    }
+
+    void blue(){
+      digitalWrite(b, HIGH);
       digitalWrite(r, LOW);
       digitalWrite(g, LOW);
+    }
+    
+    void flashRed(uint8_t count) {
+      off();
+      while(count--){
+        digitalWrite(r, HIGH);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(r, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+      }  
+    }
+
+    void flashGreen(uint8_t count) {
+      off();
+      while(count--){
+        digitalWrite(g, HIGH);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(g, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+      }
+    }
+
+    void flashBlue(uint8_t count)  {
+      off();
+      while(count--){
+        digitalWrite(b, HIGH);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(b, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+      }
+    }
+
+    void flashYellow(uint8_t count){
+      off();
+      while(count--){
+        digitalWrite(r, HIGH);
+        digitalWrite(g, HIGH);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(r, LOW);
+        digitalWrite(g, LOW);
+      }
     }
 
     void off(){   // function to put off all eds
@@ -143,5 +183,6 @@ void mqttReply(char* msg);
 void mqttPing();
 void splitData(char* filename);
 bool startImage(const char* img);
+void mqttCommand(char* msg);
 
 #endif

@@ -53,7 +53,7 @@ void ledDriver::endFrame(uint8_t count){
 }
 
 void ledDriver::sendColor(CRGB col){
-  _myspi.transfer(0b11100000 | mySettings.brightnessRaw);   // global brightness
+  _myspi.transfer(0b11100000 | mySettings.getBrightness());   // global brightness
   _myspi.transfer(col.b);
   _myspi.transfer(col.g);
   _myspi.transfer(col.r);
