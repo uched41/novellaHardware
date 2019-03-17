@@ -24,13 +24,13 @@ class Settings{
       brightnessRaw = map(val, 0, 100, 1, 31);
     }
 
-    uint8_t getBrightness(){
-      if(brightnessMode == 0){
+    uint8_t getBrightness(){return brightnessRaw;
+      /*if(brightnessMode == 0){
         return brightnessRaw;
       }
       else if(brightnessMode == 1){
         return  (uint8_t)map(analogRead(LDR_PIN), 0, 1023, 31, 0);
-      }
+      }*/
     }
 };
 
@@ -75,10 +75,12 @@ class DataBuffer{
         return;
       }
       clearBuffer();
-    
-      uint8_t noCols;
-      file.read(&noCols, 1);
-     
+
+      uint8_t arrt [2];
+      int noCols;
+      file.read(arrt, 2);
+      noCols = arrt[0]<<8 | arrt[1] ;
+      debugln("Buffer, No of columns: " + String(noCols));
       _buffer = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );
     
       for(uint8_t it=0; it<noCols; it++)  {

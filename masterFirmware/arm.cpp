@@ -56,9 +56,10 @@ void arm::showImage(){
 
     // show image according to direction
     if(dir){
-      if(_colPointer > -1 ){
+      if(_colPointer >= 0  ){
         showColumn( _imgData[_colPointer] );        // show the next column
-        _colPointer   = (_colPointer - 1);          // increment the column pointer and make sure that we dont exceed the maximum
+        _colPointer   = (_colPointer - 1);         
+       
         delayMicroseconds(mySettings.delayBtwColumns);
       }
       else{

@@ -10,7 +10,7 @@ class arm{
     TaskHandle_t _mytask;            
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     
-    volatile uint8_t _colPointer = 0;        // variable that points to the current column being displayed
+    volatile int _colPointer = 0;        // variable that points to the current column being displayed
     volatile bool dir = false;               // variable that determines direction
     
     uint8_t arm_no=0;

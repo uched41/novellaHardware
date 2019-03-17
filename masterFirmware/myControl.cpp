@@ -41,7 +41,7 @@ void mqttInit(void){
   uint64_t chipid = ESP.getEfuseMac();
   sprintf(deviceID, "S%04X%08X", (uint16_t)(chipid>>32), (uint32_t)chipid);
   devID = String(deviceID);
-  String tem = String(MQTT_BASE_TOPIC) + "/" + devID + "/#";
+  String tem = String(MQTT_BASE_TOPIC) + "/" + devID;
   
   tem.toCharArray(mqtt_input_topic, tem.length()+1);
   debug("MQTT Topics: "); debugln(mqtt_input_topic);

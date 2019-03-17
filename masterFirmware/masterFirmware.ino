@@ -27,7 +27,7 @@ void setup(){
   mqttInit();
   armsInit();
 
-  debug("INIT: Initialization complete.");
+  debugln("INIT: Initialization complete.");
 }
 
 

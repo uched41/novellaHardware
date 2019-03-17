@@ -3,7 +3,7 @@
 
 void setupIsr(){
   // Initialize trigger pin as interrupt to notify us form master
-  debug("INIT: Setting up ISRs for arms");
+  debugln("INIT: Setting up ISRs for arms");
   pinMode(hallSensor1, INPUT_PULLUP);
   pinMode(hallSensor2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(hallSensor1), isr1, CHANGE);
@@ -34,7 +34,7 @@ bool createTask(arm* myarm){
 
   if(!myarm->taskCreated){
     myarm->_colPointer = 0;     // set column pointer back to zero
-    debug("INIT: Creating task on arm: "+ String(myarm->arm_no));
+    debugln("INIT: Creating task on arm: "+ String(myarm->arm_no));
 
     if(myarm == &arm1){
       xTaskCreatePinnedToCore(
@@ -62,7 +62,7 @@ bool createTask(arm* myarm){
     myarm->taskCreated = true;
   }
   else{
-    debug("Task Already created on arm: "+ String(myarm->arm_no));
+    debugln("Task Already created on arm: "+ String(myarm->arm_no));
   }
   return true;
 }
