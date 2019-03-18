@@ -2,7 +2,6 @@
 #include "comm.h"
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include "motor.h"
 #include <WiFi.h>
 
 WiFiClient espClientm;
@@ -13,12 +12,16 @@ long lastPingTime = 0;
 const char* mqtt_server = "192.168.1.109";
 const char* mqtt_output_topic = "novella/devices/lampbody/response/";
 const char* mqtt_ping_topic   = "novella/devices/lampbody/ping/";
+const char* mqtt_command_topic   = "novella/devices/lampbody/command/";
+
 char mqtt_input_topic[50];
 char deviceID[18];
 String devID = " ";
 char* pingMsg;
 
 void mqttCallback(char* topic, byte* payload, unsigned int length) ;
+
+Settings mySettings;
 
 // function to initiialize mqtt
 void mqttInit(void){
@@ -43,6 +46,9 @@ void mqttInit(void){
   pingMsg = (char*)malloc(root.measureLength()+1);
   root.printTo(pingMsg, root.measureLength()+1);
   debug("Ping Message: "); debugln(pingMsg);
+
+  mqttReconnect();
+  mqttCommand("Starting");
 }
 
 
@@ -65,17 +71,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     String cmd = root["command"];
 
     // switch through the different types of commands
-    if(cmd == "Coil_On"){
-      debugln("Enabling Coil");
-      digitalWrite(CONSTANT_PWM_ENABLE_PIN, HIGH);
-      mqttReply("OK");
-    }
-    else if(cmd == "Coil_Off"){
-      debugln("Disabling Coil");
-      digitalWrite(CONSTANT_PWM_ENABLE_PIN, LOW);
-      mqttReply("OK");
-    }
-    else if(cmd == "Motor_On"){
+    if(cmd == "Motor_On"){
       motor.enable(); 
       mqttReply("OK");
     }
@@ -85,7 +81,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
     else if(cmd == "Set_Motor_Speed"){  // In percentage (%)
       if(root.containsKey("value")){
-        motor.setPulse( int(root["value"]) );
+        mySettings.setMotorSpeed(root["value"]);
         mqttReply("OK");
       }
       else {
@@ -94,23 +90,30 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
     else if(cmd == "Set_ColdLed_Brightness"){  // In percentage (%)
       if(root.containsKey("value")){
-        coldLed.setPulse( int(root["value"]) );
+        mySettings.setColdLed(root["value"]);
         mqttReply("OK");
       }
       else {
         mqttReply("Error, value not specified");
       }
     }
-     else if(cmd == "Set_WarmLed_Brightness"){  // In percentage (%)
+    else if(cmd == "Set_WarmLed_Brightness"){  // In percentage (%)
       if(root.containsKey("value")){
-        warmLed.setPulse( int(root["value"]) );
+        mySettings.setWarmLed(root["value"]);
         mqttReply("OK");
       }
       else {
         mqttReply("Error, value not specified");
       }
     }
-    
+
+   else if(cmd == "Saved_Data"){
+      debugln("MQTT: Receiving saved settings");
+      mySettings.setMotorSpeed(root["Motor_Speed"]);
+      mySettings.setWarmLed(root["WarmLed_Brightness"]);
+      mySettings.setColdLed(root["ColdLed_Brightness"]);
+    }
+   
   }
 
 }
@@ -153,6 +156,22 @@ void mqttLoop() {
 void mqttPing(){
    mqttclient.publish(mqtt_ping_topic, pingMsg);  
    debugln("pinging");
+}
+
+// mqtt command
+void mqttCommand(char* msg){
+  DynamicJsonBuffer  jsonBuffer(300);
+  JsonObject& root = jsonBuffer.createObject();
+  root["id"] = devID;
+  root["type"] = "lampbody";
+  root["command"] = String(msg);
+  char* temp1;
+  temp1 = (char*)malloc(root.measureLength()+1);
+  root.printTo(temp1, root.measureLength()+1);
+  debug("MQTT Command: "); debugln(temp1);
+  
+  mqttclient.publish(mqtt_command_topic, temp1);
+  free(temp1);
 }
 
 // mqtt Reply

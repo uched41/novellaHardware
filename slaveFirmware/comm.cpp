@@ -91,11 +91,11 @@ void commParser()
   
           if(val == 0){
             debugln("Setting brightness mode to manual");
-            mySettings.brighnessMode = 0;
+            mySettings.brightnessMode = 0;
           }
           else if(val == 1){
             debugln("Setting brightness mode to automatic");
-            mySettings.brighnessMode = 1;
+            mySettings.brightnessMode = 1;
           }
           debugln("CONFIG: Brightness Mode set.");
           return;
@@ -103,8 +103,7 @@ void commParser()
 
       // set brightness value
       else if(cmd == "Brightness"){
-        String temp = root["value"];
-        int val = temp.toInt();
+        int val = root["value"];
         debugln("MQTT: Setting brightness value: "); debugln(val);
         mySettings.setBrightness(val);
         debugln("CONFIG: Brightness Value set.");
@@ -113,19 +112,26 @@ void commParser()
 
       // set column delay
       else if(cmd == "Column_Delay"){
-        String temp = root["value"];
-        int val = temp.toInt();
+        int val = root["value"];
         debugln("MQTT: Setting delay between columns: "); debugln(val);
         mySettings.delayBtwColumns = val;
         return;
       }
 
+      // set column delay
+      else if(cmd == "Divider"){
+        int val = root["value"];
+        debugln("MQTT: Setting color divider: "); debugln(val);
+        mySettings.divider = val;
+        return;
+      }
       
       else if(cmd == "Saved_Data"){
         debugln("MQTT: Receiving saved settings");
         mySettings.delayBtwColumns = root["Delay_Columns"];
         mySettings.setBrightness(root["Brightness"]);
-        mySettings.brighnessMode = root["Brightness_Mode"];
+        mySettings.brightnessMode = root["Brightness_Mode"];
+        mySettings.divider = root["Divider"];
      }
     
     }

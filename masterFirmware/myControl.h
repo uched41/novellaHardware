@@ -15,6 +15,7 @@ class Settings{
     uint8_t brightnessMode = 0;  // 0 = manual, 1, automatic
     uint8_t brightnessPercent = 50;  // value of brightness in percentage
     uint8_t brightnessRaw = 16;  // brightness value on 1 - 32 scale
+    uint8_t divider = 16;      // divider for colors
     uint8_t isPaired = 0;
     
     int delayBtwColumns = 50;

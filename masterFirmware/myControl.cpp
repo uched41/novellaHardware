@@ -56,6 +56,8 @@ void mqttInit(void){
   debug("Ping Message: "); debugln(pingMsg);
 
   debug("MQTT Topics: "); debugln(mqtt_input_topic);
+  mqttReconnect();
+  mqttCommand("Starting");
 }
 
 
@@ -74,7 +76,6 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // Receiving file
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
     if(tstring.indexOf("mid") > -1){   // receiving file content
-      debugln(".here");
       mqttFile.write(payload, FILE_BUF_SIZE);        // write file
       mqttReply("OK");
     }
@@ -192,10 +193,18 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     // Command to delay between column
     else if(cmd == "Column_Delay"){
-      String temp = root["value"];
-      int val = temp.toInt();
+      int val = root["value"];
       debug("MQTT: Setting delay between columns: "); debugln(val);
       mySettings.delayBtwColumns = val;
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+
+    // Command to set divider
+    else if(cmd == "Divider"){
+      int val = root["value"];
+      debug("MQTT: Setting color divider: "); debugln(val);
+      mySettings.divider = val;
       mqttReply("OK");
       sendToSlave = true;
     }
@@ -205,13 +214,14 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       mySettings.delayBtwColumns = root["Delay_Columns"];
       mySettings.setBrightness(root["Brightness"]);
       mySettings.brightnessMode = root["Brightness_Mode"];
-
+      mySettings.divider = root["Divider"];
+      
       mySettings.isPaired = 1;
       statusLed.off();
       
       sendToSlave = true;
        
-      const char* img = root["image"];
+      const char* img = root["Image"];
       bool ans = startImage(img);
       if(ans){
         mqttReply("Success");
@@ -293,6 +303,7 @@ void mqttCommand(char* msg){
   DynamicJsonBuffer  jsonBuffer(300);
   JsonObject& root = jsonBuffer.createObject();
   root["id"] = devID;
+  root["type"] = "lampshade";
   root["command"] = String(msg);
   char* temp1;
   temp1 = (char*)malloc(root.measureLength()+1);

@@ -13,7 +13,7 @@ ledDriver::ledDriver(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t da
 void ledDriver::begin(uint16_t length1)
 {
   _length = length1;
-  _myspi.setFrequency(40000000);
+  _myspi.setFrequency(20000000);
   _myspi.begin(_clkPin, _misoPin, _dataPin, _ssPin);  // start spi connection
   _buffer =(CRGB*) malloc(sizeof(CRGB)*_length);
 }
@@ -51,10 +51,10 @@ void ledDriver::endFrame(uint8_t count){
 }
 
 void ledDriver::sendColor(CRGB col){
-  _myspi.transfer(0b11100000 | mySettings.brightnessRaw);   // global brightness
-  _myspi.transfer(col.b);
-  _myspi.transfer(col.g);
-  _myspi.transfer(col.r);
+  _myspi.transfer(0b11100000 | mySettings.getBrightness());   // global brightness
+  _myspi.transfer(col.b/mySettings.divider);
+  _myspi.transfer(col.g/mySettings.divider);
+  _myspi.transfer(col.r/mySettings.divider);
 }
 
 void ledDriver::show(){
