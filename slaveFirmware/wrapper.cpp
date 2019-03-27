@@ -10,11 +10,11 @@ void setupIsr(){
   attachInterrupt(digitalPinToInterrupt(hallSensor2), isr2, CHANGE);
 }
 
-void isr1(){
+void IRAM_ATTR isr1(){
   arm1.execIsr();
 }
 
-void isr2(){
+void IRAM_ATTR isr2(){
   arm2.execIsr();
 }
 

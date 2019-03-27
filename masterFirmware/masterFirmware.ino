@@ -49,8 +49,9 @@ void myInit(){
   statusLed.green();
   
   // Initialize reset pin
-  pinMode(RESET_SWITCH, INPUT_PULLUP);    
-  attachInterrupt(digitalPinToInterrupt(RESET_SWITCH), resetIsr, FALLING );
+  pinMode(RESET_SWITCH, INPUT);    
+  digitalWrite(RESET_SWITCH, LOW);
+  //attachInterrupt(digitalPinToInterrupt(RESET_SWITCH), resetIsr, RISING );
 }
 
 // Isr to trigger reset task
@@ -64,9 +65,11 @@ void resetTask(void *pvparameters){
   debugln("Starting reset task");
   
   unsigned long duration = millis();
-  while(!digitalRead(RESET_SWITCH));  // Wait until button is released
+  statusLed.red();
+  while(digitalRead(RESET_SWITCH));  // Wait until button is released
   if(millis()-duration > 5000){  // Timeout occured
     debugln("Resetting lamp");
+    statusLed.flashRed(6);
     mqttCommand("Reset");
   }
   vTaskDelete(resetTaskHandle);

@@ -3,6 +3,7 @@
 
 #include "FS.h"
 #include "SPIFFS.h"
+#include "comm.h"
 
 #define MQTT_BASE_TOPIC "novella/devices"
 #define MQTT_PING_INTERVAL 10000  //  in milliseconds
@@ -69,12 +70,14 @@ class DataBuffer{
       Serial.println("DataBuffer: Done Setting buffer");
     }
 
-    void setBuffer(char* filename){
+    bool setBuffer(const char* filename){
+      Serial.print("Setting buffer with file: "); Serial.println(filename);
       File file= SPIFFS.open(filename);
       if(!file) {
         Serial.println("ERROR: failed to open file.");
-        return;
+        return false;
       }
+      Serial.println("File opened");
       clearBuffer();
 
       uint8_t arrt [2];
@@ -93,6 +96,7 @@ class DataBuffer{
       
       file.close();
       Serial.println("DataBuffer: data split complete");
+      return true;
     }
 };
 
@@ -125,6 +129,18 @@ class StatusLed{
       digitalWrite(b, HIGH);
       digitalWrite(r, LOW);
       digitalWrite(g, LOW);
+    }
+
+    void yellow(){
+      digitalWrite(r, HIGH);
+      digitalWrite(g, HIGH);
+      digitalWrite(b, LOW);
+    }
+
+    void purple(){
+      digitalWrite(r, HIGH);
+      digitalWrite(g, LOW);
+      digitalWrite(b, HIGH);
     }
     
     void flashRed(uint8_t count) {
@@ -174,6 +190,17 @@ class StatusLed{
       digitalWrite(r, LOW);
     }
 
+    void onDisplaying(){
+      blue();
+    }
+
+    void onTransferring(){
+      yellow();
+    }
+
+    void onReceiving(){
+      purple();
+    }
 };
 
 extern StatusLed statusLed;

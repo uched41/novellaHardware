@@ -3,13 +3,14 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include <WiFi.h>
+#include <ESPmDNS.h>
 
 WiFiClient espClientm;
 PubSubClient mqttclient(espClientm);
 
 long lastPingTime = 0;
 
-const char* mqtt_server = "192.168.1.109";
+const char* mqtt_server = "povlamp";
 const char* mqtt_output_topic = "novella/devices/lampbody/response/";
 const char* mqtt_ping_topic   = "novella/devices/lampbody/ping/";
 const char* mqtt_command_topic   = "novella/devices/lampbody/command/";
@@ -25,10 +26,24 @@ Settings mySettings;
 
 // function to initiialize mqtt
 void mqttInit(void){
+  /* setup MDNS for ESP32 */
+  if (!MDNS.begin("esp32")) {
+      Serial.println("Error setting up MDNS responder!");
+      while(1) {
+          delay(1000);
+      }
+  }
+  IPAddress serverIp = MDNS.queryHost(mqtt_server, 5000);
+  Serial.print("IP address of server: ");
+  Serial.println(serverIp.toString());
+  MDNS.end();
+  
+  debugln("MQTT: Initilializing mqtt");
+  mqttclient.setServer(serverIp, 1883);
+  mqttclient.setCallback(mqttCallback);
+  
   memset(mqtt_input_topic, 0, 50);
   debugln("MQTT: Initializing mqtt");
-  mqttclient.setServer(mqtt_server, 1883);
-  mqttclient.setCallback(mqttCallback);
 
   uint64_t chipid = ESP.getEfuseMac();
   sprintf(deviceID, "B%04X%08X", (uint16_t)(chipid>>32), (uint32_t)chipid); // Lampbodies will have a 'B' in front

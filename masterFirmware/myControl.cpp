@@ -1,6 +1,7 @@
 #include <WiFi.h>              // Built-in
 #include "myconfig.h"
 #include "myControl.h"
+#include <ESPmDNS.h>
 
 #define MQTT_MAX_PACKET_SIZE 1024
 #include <PubSubClient.h>
@@ -15,7 +16,7 @@ long lastPingTime = 0;
 
 WiFiClient espClientm;
 PubSubClient mqttclient(espClientm);
-const char* mqtt_server = "192.168.1.109";
+const char* mqtt_server = "povlamp";
 const char* mqtt_output_topic = "novella/devices/lampshade/response";
 const char* mqtt_ping_topic   = "novella/devices/lampshade/ping/";
 const char* mqtt_command_topic   = "novella/devices/lampshade/command/";
@@ -34,14 +35,26 @@ Settings mySettings;                   // Initialize settings object
   
 // function to initiialize mqtt
 void mqttInit(void){
+  /* setup MDNS for ESP32 */
+  if (!MDNS.begin("esp32")) {
+      Serial.println("Error setting up MDNS responder!");
+      while(1) {
+          delay(1000);
+      }
+  }
+  IPAddress serverIp = MDNS.queryHost(mqtt_server, 5000);
+  Serial.print("IP address of server: ");
+  Serial.println(serverIp.toString());
+  MDNS.end();
+  
   debugln("MQTT: Initilializing mqtt");
-  mqttclient.setServer(mqtt_server, 1883);
+  mqttclient.setServer(serverIp, 1883);
   mqttclient.setCallback(mqttCallback);
 
   uint64_t chipid = ESP.getEfuseMac();
   sprintf(deviceID, "S%04X%08X", (uint16_t)(chipid>>32), (uint32_t)chipid);
   devID = String(deviceID);
-  String tem = String(MQTT_BASE_TOPIC) + "/" + devID;
+  String tem = String(MQTT_BASE_TOPIC) + "/" + devID + "/#";
   
   tem.toCharArray(mqtt_input_topic, tem.length()+1);
   debug("MQTT Topics: "); debugln(mqtt_input_topic);
@@ -65,7 +78,7 @@ void mqttInit(void){
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   bool sendToSlave = false;
   debug("MQTT: Message arrived [");  debug(topic); debugln("] ");
-  printArray((char*)payload, length);
+  
   char* sBuf[length];
   memcpy(sBuf, payload, length);
   
@@ -75,12 +88,16 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
   // Receiving file
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
+
+    dumpBuf(payload, length);
+    
     if(tstring.indexOf("mid") > -1){   // receiving file content
       mqttFile.write(payload, FILE_BUF_SIZE);        // write file
       mqttReply("OK");
     }
     else if(tstring.indexOf("start") > -1){  // check is this is a start message
-      String filen = root["filename"];
+      statusLed.onReceiving();
+      const char* filen = root["filename"];
       debug("MQTT: Receiving file: "); debugln(filen); 
       if(SPIFFS.exists(filen)){             // Delete file if it already exists
         debugln("MQTT: Previous file found, deleting...");
@@ -102,24 +119,21 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   }
 
   // Receiving command
-  else if(root.containsKey("command")){   
+  else if(root.containsKey("command")){  
+    printArray((char*)payload, length); 
     String cmd = root["command"];
 
     // Command to start displaying file
     if(cmd == "Start_Display"){
+      const char* dispFile = root["file"];
       if(!root.containsKey("file")){
         mqttReply("No File Specified"); 
         return;
       }
-      const char* dispFile = root["file"];
       bool ans = startImage(dispFile);
-      if(ans){
-        mqttReply("Success");
-      }
-      else {
-        mqttReply("Failed");  
-        errorHandler("Error starting display");    
-      }
+      mqttReply("Success");
+      debugln("Starting file: " + String(dispFile));
+      
     }
 
      // Command to Delete bin file
@@ -140,7 +154,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       arm1.stop();
       arm2.stop();
       mqttReply("OK");
-      return;
+      sendToSlave = true;
     }
 
     // Command to get files in memory 
@@ -317,16 +331,19 @@ void mqttCommand(char* msg){
 // Function to start displaying image
 bool startImage(const char* img){
   debugln("Starting Image, " + String(img));
-  dataStore.setBuffer((char*)img);   // copy data from file into buffer
+ 
+  bool res = dataStore.setBuffer(img);   // copy data from file into buffer
+  if(!res) return false;
+  
   arm1.stop();
   arm2.stop();
 
-  statusLed.flashYellow(2);
-  if(!slave1.attemptSend()){   // send to slave1
+  statusLed.onTransferring();
+ /* if(!slave1.attemptSend()){   // send to slave1
     debugln("MQTT: Unable to send to slave");
     mqttReply("Error");
     return 0;
-  }
+  }*/
   
   debugln("Data sent to slave");
   mqttReply("OK");
@@ -341,7 +358,14 @@ bool startImage(const char* img){
     createTask(&arm2);
   }  
   debugln("Image display started");
-  statusLed.flashBlue(4);
+  statusLed.onDisplaying();
+
+  if(!slave1.attemptSend()){   // send to slave1
+    debugln("MQTT: Unable to send to slave");
+    mqttReply("Error");
+    return 0;
+  }
+  
   return 1;
 }
 

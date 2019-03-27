@@ -19,8 +19,8 @@ void IRAM_ATTR arm::execIsr(){
    *  which means that we hav reached the 180 degrees point
    */
    portENTER_CRITICAL_ISR(&mux);
-   debugln("ARM: Restarting Image on arm: " + String(arm_no) );
-    _colPointer = 0;
+   //debugln("ARM: Restarting Image on arm: " + String(arm_no) );
+    //_colPointer = 0;
     if(dir){
       _colPointer = 0;
       dir = false;
@@ -38,7 +38,7 @@ void arm::showColumn(uint8_t* buf){
     leds->setBuffer(buf, _len);
     leds->show();
     portEXIT_CRITICAL_ISR(&mux);
-    
+     
 }
 
 
@@ -52,30 +52,34 @@ void arm::showImage(){
   Serial.print("no columns: "); Serial.println(_noColumns);
   while(1){
     isRunning = true;
-
+    
     // show image according to direction
     if(dir){
+       portENTER_CRITICAL_ISR(&mux);    // these mutexes fixed, crash problem, because, they ensure that the value of _colPointer is being updated only once at a time
       if(_colPointer >= 0  ){
         showColumn( _imgData[_colPointer] );        // show the next column
         _colPointer   = (_colPointer - 1);         
-       
+        portEXIT_CRITICAL_ISR(&mux);
         delayMicroseconds(mySettings.delayBtwColumns);
       }
       else{
+        portEXIT_CRITICAL_ISR(&mux);
         leds->clear();
       }
     }
     else{
+      portENTER_CRITICAL_ISR(&mux);
       if(_colPointer < _noColumns){
         showColumn( _imgData[_colPointer] );        // show the next column
         _colPointer   = (_colPointer + 1);          // increment the column pointer and make sure that we dont exceed the maximum
+        portEXIT_CRITICAL_ISR(&mux);
         delayMicroseconds(mySettings.delayBtwColumns);
       }
       else{
+        portEXIT_CRITICAL_ISR(&mux);
         leds->clear();
       }
-    }
-    
+    }    
   }
 }
 

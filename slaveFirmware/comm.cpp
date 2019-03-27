@@ -101,6 +101,13 @@ void commParser()
           return;
        }
 
+      // Command to stop display
+      else if(cmd == "Stop_Display"){
+        debugln("MQTT: Stopping display");
+        arm1.stop();
+        arm2.stop();
+      }
+
       // set brightness value
       else if(cmd == "Brightness"){
         int val = root["value"];
@@ -120,6 +127,7 @@ void commParser()
 
       // set column delay
       else if(cmd == "Divider"){
+        debugln("Setting divy");
         int val = root["value"];
         debugln("MQTT: Setting color divider: "); debugln(val);
         mySettings.divider = val;

@@ -39,7 +39,7 @@ extern bool canPlay;
 #define hallSensor1     25    // Trigger pin for arm1, To be connected to HALL SENSOR 1
 #define hallSensor2     26    // Trigger pin for arm2, To be connected to HALL SENSOR 2
 
-#define RESET_SWITCH    35
+#define RESET_SWITCH    5
 
 // Debug setup
 #define myBaudRate    115200

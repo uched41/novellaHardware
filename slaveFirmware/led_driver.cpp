@@ -28,11 +28,13 @@ void ledDriver::setPixel(uint16_t pixel, CRGB col)
 void ledDriver::setBuffer(uint8_t* buf, uint16_t pixelLen)
 {
     uint16_t tcount = 0;
+    memcpy(_buffer, buf, sizeof(CRGB)*_length);
+    /*
     for(uint16_t i=0; i<pixelLen; i++)
     {
       CRGB tcol = { buf[tcount++], buf[tcount++], buf[tcount++] };
       _buffer[i] = tcol;
-    }
+    }*/
 }
 
 void ledDriver::startFrame(){
@@ -52,9 +54,9 @@ void ledDriver::endFrame(uint8_t count){
 
 void ledDriver::sendColor(CRGB col){
   _myspi.transfer(0b11100000 | mySettings.getBrightness());   // global brightness
-  _myspi.transfer(col.b/mySettings.divider);
-  _myspi.transfer(col.g/mySettings.divider);
-  _myspi.transfer(col.r/mySettings.divider);
+  _myspi.transfer(col.b/mySettings.getDivider());
+  _myspi.transfer(col.g/mySettings.getDivider());
+  _myspi.transfer(col.r/mySettings.getDivider());
 }
 
 void ledDriver::show(){

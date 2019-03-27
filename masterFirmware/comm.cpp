@@ -133,8 +133,9 @@ bool slave::sendData()
     columnBuf[ sColumn+1 ] = (uint8_t)( tempCrc&0x00ff);
 
     sendBuf(columnBuf, sColumn+2);    // send the message and wait for reply
-    dumpBuf(columnBuf, sColumn+2);
-
+    //dumpBuf(columnBuf, sColumn+2);
+    debug('.');
+    
     if( !waitForData(tempBuf, 2) ) {  // the slave will reply with the crc of last data sent
       errorHandler("ERROR: Slave did not respond"); return 0;
       }
@@ -165,7 +166,7 @@ bool slave::waitForData(uint8_t* buf, uint16_t len)
    auto ans = mySerial->readBytes( buf, len);
    serClear();
    if(ans == len){
-     dumpBuf(buf, len);
+     //dumpBuf(buf, len);
      return true;
    }
    else return false;
