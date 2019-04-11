@@ -8,6 +8,8 @@ class arm{
   public:
     ledDriver *leds;
     TaskHandle_t _mytask;            
+    SemaphoreHandle_t  mSema = NULL;
+    BaseType_t xHigherPriorityTaskWoken;
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     
     volatile int _colPointer = 0;        // variable that points to the current column being displayed
@@ -42,3 +44,4 @@ extern arm arm2;
 
 
 #endif
+

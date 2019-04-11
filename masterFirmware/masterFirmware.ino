@@ -7,6 +7,7 @@
 #include "arm.h"
 #include "wrapper.h"
 #include "led_driver.h"
+#include "esp_task_wdt.h"
 
 // Slave device
 slave slave1(SLAVE1_TX, SLAVE1_RX, 1);
@@ -21,7 +22,14 @@ StatusLed statusLed(RED_LED, GREEN_LED, BLUE_LED);
 // Reset task
 TaskHandle_t resetTaskHandle;
 
+volatile bool started_1 = false;   // this boolean will tell us if this is the first rotation, so we can act accordingly
+volatile bool started_2 = false;
+
+portMUX_TYPE serMutex = portMUX_INITIALIZER_UNLOCKED;  // mutex for sending to slave
+
 void setup(){
+  //rtc_clk_cpu_freq_set(RTC_CPU_FREQ_240M);
+  //esp_task_wdt_init(5, false);
   myInit();          // Initialization
   networkInit();
   mqttInit();
@@ -32,7 +40,7 @@ void setup(){
 
 
 void loop(){
-  delay(5);
+  vTaskDelay(5/ portTICK_PERIOD_MS);
   mqttLoop();
 }
 
@@ -77,8 +85,8 @@ void resetTask(void *pvparameters){
 
 // Initialize the slave part of our master
 void armsInit(void){
-  arm1.setCore(0);  // set up arms, let both arm tasks run on core 0
-  arm2.setCore(0);
+  arm1.setCore(1);  // set up arms, let both arm tasks run on core 0
+  arm2.setCore(1);
   setupIsr();
 }
 
@@ -95,3 +103,4 @@ void errorHandler(char* msg){
   debugln(msg);
   statusLed.flashRed(2);
 }
+

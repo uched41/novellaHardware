@@ -36,6 +36,7 @@ class ledDriver
       void sendColor(CRGB col);
       void refresh();
       void clear();
+      void transfer(uint8_t b);
 };
 
 

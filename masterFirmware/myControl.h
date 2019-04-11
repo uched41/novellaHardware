@@ -44,6 +44,7 @@ class DataBuffer{
   public:
     uint8_t** _buffer;
     int _noColumns;
+    int scount;
      
     DataBuffer(int columnLength){
       _buffer = NULL;
@@ -57,7 +58,17 @@ class DataBuffer{
         free(_buffer[i]);
       }
     }
-  
+
+    void initBuffer(int len){
+      clearBuffer();
+      _buffer = (uint8_t**)malloc( sizeof(uint8_t*)*len );
+      for(int i=0; i<len; i++){
+        uint8_t* newBuf = (uint8_t*)malloc(_colLength);
+        _buffer[i] = newBuf;
+      }
+      _noColumns = len;
+    }
+    
     void setBuffer(uint8_t** buf, int len){
       clearBuffer();
       _buffer = (uint8_t**)malloc( sizeof(uint8_t*)*len );
@@ -216,3 +227,4 @@ bool startImage(const char* img);
 void mqttCommand(char* msg);
 
 #endif
+

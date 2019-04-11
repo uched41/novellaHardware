@@ -9,6 +9,8 @@
 
 // Overall Global Variables
 extern bool canPlay;
+extern volatile bool started_1;
+extern volatile bool started_2;
 
 // constants
 #define LED_COUNT       88
@@ -47,9 +49,11 @@ extern bool canPlay;
 #define debugln(c)    debugSerial.println(c)
 #define debug(c)      debugSerial.print(c)
 
+extern portMUX_TYPE serMutex;
 
 // funtion definitions
 void printArray(char* arr, int len);
 void errorHandler(char* msg);
 
 #endif
+

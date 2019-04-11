@@ -22,6 +22,7 @@ const char* mqtt_ping_topic   = "novella/devices/lampshade/ping/";
 const char* mqtt_command_topic   = "novella/devices/lampshade/command/";
 
 char mqtt_input_topic[50];
+String mfname;
 char deviceID[18];
 String devID = " ";
 char* pingMsg;
@@ -31,6 +32,8 @@ int FILE_BUF_SIZE = 512;    // must correlate with mqtt buf size
 File mqttFile;
 
 DataBuffer dataStore(sColumn);         // Data storer object
+DataBuffer mqttStore(FILE_BUF_SIZE);
+
 Settings mySettings;                   // Initialize settings object
   
 // function to initiialize mqtt
@@ -89,29 +92,44 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // Receiving file
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
 
-    dumpBuf(payload, length);
+    //dumpBuf(payload, length);
     
     if(tstring.indexOf("mid") > -1){   // receiving file content
-      mqttFile.write(payload, FILE_BUF_SIZE);        // write file
+      memcpy(mqttStore._buffer[mqttStore.scount], payload, FILE_BUF_SIZE);
+      mqttStore.scount = mqttStore.scount + 1;
       mqttReply("OK");
     }
     else if(tstring.indexOf("start") > -1){  // check is this is a start message
       statusLed.onReceiving();
       const char* filen = root["filename"];
-      debug("MQTT: Receiving file: "); debugln(filen); 
+      mfname = String(filen);
+      int flen = root["no_lines"];
+
       if(SPIFFS.exists(filen)){             // Delete file if it already exists
         debugln("MQTT: Previous file found, deleting...");
         SPIFFS.remove(filen);
       }
-      mqttFile = SPIFFS.open(filen, FILE_WRITE);
-      if(!mqttFile){
-        errorHandler("Error opening file");
-      }
+      
+      debug("MQTT: Receiving file: "); debugln(filen); 
+      debug("MQTT: No of lines "); debugln(flen);
+      debugln("Initializing buffer ..");
+      mqttStore.initBuffer(flen);
+      mqttStore.scount = 0;    
       mqttReply("OK");
     }
     else if(tstring.indexOf("end") > -1){    // handle end of file reception
-      debugln("MQTT: File Complete.");
+      debug("MQTT: File data received: "); debugln(mfname.c_str());
+      mqttFile = SPIFFS.open(mfname.c_str(), FILE_WRITE);
+      if(!mqttFile){
+        errorHandler("Error opening file");
+      }
+
+      for(int i=0; i< mqttStore._noColumns; i++){
+        ///dumpBuf(mqttStore._buffer[i], FILE_BUF_SIZE);
+        mqttFile.write(mqttStore._buffer[i], FILE_BUF_SIZE); 
+      }
       mqttFile.close();
+      debugln("MQTT: File received successfully.");
       mqttReply("OK");
       statusLed.flashGreen(4);
     }
@@ -349,6 +367,8 @@ bool startImage(const char* img){
   mqttReply("OK");
   setArmData(dataStore._buffer, dataStore._noColumns);
 
+  resetArms();
+  
  if(arm1.isTaskCreated() && arm2.isTaskCreated()){
     arm1.resume();          // resume task if already created
     arm2.resume();
@@ -368,4 +388,5 @@ bool startImage(const char* img){
   
   return 1;
 }
+
 

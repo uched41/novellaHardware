@@ -8,5 +8,6 @@ void setupIsr();
 void Arm1Task(void *pvparameters);
 void Arm2Task(void *pvparameters);
 bool createTask(arm* myarm);
+void resetArms();
 
 #endif

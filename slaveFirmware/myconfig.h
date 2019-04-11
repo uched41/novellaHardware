@@ -12,11 +12,14 @@
 #define IMAGE_HEIGHT LED_COUNT
 #define sColumn   IMAGE_HEIGHT*3           // size of one column array
 
+extern volatile bool started_1;
+extern volatile bool started_2;
+
 // SPI1 pins
 #define DATA_PIN1   13
 #define MISO_PIN1   12
 #define CLOCK_PIN1  14
-#define SS_PIN1    27
+#define SS_PIN1     27
 
 // SPI2 pins
 #define DATA_PIN2   23

@@ -10,12 +10,39 @@ void setupIsr(){
   attachInterrupt(digitalPinToInterrupt(hallSensor2), isr2, CHANGE);
 }
 
-void isr1(){
-  arm1.execIsr();
+void resetArms(){
+  started_1 = false;
+  started_2 = false;
+  arm1.dir = false;
+  arm2.dir = false;
 }
 
-void isr2(){
-  arm2.execIsr();
+void IRAM_ATTR isr1(){
+  portENTER_CRITICAL_ISR(&(arm1.mux));
+  if(!started_1){
+    if(digitalRead(hallSensor1)){     // if we have not started, start only if we are latched to high
+      started_1 = true;
+      arm1.execIsr();
+    }
+  }
+  else{
+    arm1.execIsr();
+  }
+  portEXIT_CRITICAL_ISR(&(arm1.mux));
+}
+
+void IRAM_ATTR isr2(){
+  portENTER_CRITICAL_ISR(&(arm2.mux));
+  if(!started_2){
+    if(digitalRead(hallSensor2)){     // if we have not started, start only if we are latched to high
+      started_2 = true;
+      arm2.execIsr();
+    }
+  }
+  else{
+    arm2.execIsr();
+  }
+  portEXIT_CRITICAL_ISR(&(arm2.mux));
 }
 
 void Arm1Task(void *pvparameters){
@@ -42,7 +69,7 @@ bool createTask(arm* myarm){
        "Arm1 Display", /* Name of the task */
        10000,         /* Stack size in words */
        NULL,          /* Task input parameter */
-       0,             /* Priority of the task */
+       1,             /* Priority of the task */
        &(myarm->_mytask),       /* Task handle. */
        myarm->_core);        /* Core where the task should run */
 
@@ -53,7 +80,7 @@ bool createTask(arm* myarm){
        "Arm2 Display", /* Name of the task */
        10000,         /* Stack size in words */
        NULL,          /* Task input parameter */
-       0,             /* Priority of the task */
+       1,             /* Priority of the task */
        &(myarm->_mytask),       /* Task handle. */
        myarm->_core);        /* Core where the task should run */
 
@@ -66,3 +93,4 @@ bool createTask(arm* myarm){
   }
   return true;
 }
+

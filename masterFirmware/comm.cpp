@@ -108,7 +108,7 @@ bool slave::sendData()
   // first send signal to notify slave of incoming data
   debugln("COMM: Sending data to slave " + String(serialInstance));
   debugln("COMM: Sending Initialization signal");
-
+  
   // generate message to send
   dataSignal[4] = (uint8_t)( ( dataStore._noColumns & 0xff00 ) >> 8 );
   dataSignal[5] = (uint8_t)( dataStore._noColumns & 0x00ff );
@@ -144,6 +144,7 @@ bool slave::sendData()
       }
   }
 
+  debugln("");
   debugln("COMM: SUCCESS: Complete data sent");
   return 1;
 }
@@ -152,11 +153,13 @@ bool slave::sendData()
 // Low level function to send buffer
 void slave::sendBuf(uint8_t* buf, uint16_t len)
 {
+  taskENTER_CRITICAL(&serMutex);
   for(uint16_t i=0; i< len; i++)
   {
     mySerial->write(buf[i]);
   }
   mySerial->flush();    // wait for transmission of outgoing serial data to complete
+  taskEXIT_CRITICAL(&serMutex);
 }
 
 
@@ -213,3 +216,4 @@ unsigned short crc(const unsigned char* data_p, unsigned char length)
     }
     return crc;
 }
+

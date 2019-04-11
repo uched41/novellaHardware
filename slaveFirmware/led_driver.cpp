@@ -1,4 +1,5 @@
 #include "led_driver.h"
+#include "myconfig.h"
 #include "comm.h"
 
 ledDriver::ledDriver(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t dataPin, uint8_t ssPin)
@@ -28,52 +29,60 @@ void ledDriver::setPixel(uint16_t pixel, CRGB col)
 void ledDriver::setBuffer(uint8_t* buf, uint16_t pixelLen)
 {
     uint16_t tcount = 0;
-    memcpy(_buffer, buf, sizeof(CRGB)*_length);
-    /*
-    for(uint16_t i=0; i<pixelLen; i++)
-    {
-      CRGB tcol = { buf[tcount++], buf[tcount++], buf[tcount++] };
-      _buffer[i] = tcol;
-    }*/
+    memcpy(_buffer, buf, pixelLen*3);
 }
 
 void ledDriver::startFrame(){
-  _myspi.transfer(0);
-  _myspi.transfer(0);
-  _myspi.transfer(0);
-  _myspi.transfer(0);
+   uint8_t zBuf[4] = {0, 0, 0, 0};
+   _myspi.writeBytes(zBuf, 4);
 }
 
 void ledDriver::endFrame(uint8_t count){
-  _myspi.transfer(0xFF);
-  for (uint16_t i = 0; i < 5 + count / 16; i++)
-  {
-    _myspi.transfer(0);
-  }
+  int num = 5 + count / 16;
+  uint8_t mBuf[num+1];
+  memset(mBuf, 0, num+1);
+  mBuf[0] = 0xFF;
+  
+  _myspi.writeBytes((uint8_t*)mBuf, num+1);
 }
 
 void ledDriver::sendColor(CRGB col){
-  _myspi.transfer(0b11100000 | mySettings.getBrightness());   // global brightness
-  _myspi.transfer(col.b/mySettings.getDivider());
-  _myspi.transfer(col.g/mySettings.getDivider());
-  _myspi.transfer(col.r/mySettings.getDivider());
+   _myspi.write(0b11100000 | mySettings.brightnessRaw);   // global brightness
+   _myspi.write(col.b/mySettings.divider);
+   _myspi.write(col.g/mySettings.divider);
+   _myspi.write(col.r/mySettings.divider);
 }
 
 void ledDriver::show(){
   startFrame();
-  for(uint8_t i=0; i<_length; i++){
-    sendColor(_buffer[i]);   
+  uint8_t mBuf[_length*4];
+  int mBufPointer = 0;
+  
+  for(int i=0; i<_length; i++){   
+    mBuf[mBufPointer++] = 0b11100000 | mySettings.brightnessRaw ;
+    mBuf[mBufPointer++] = _buffer[i].b /mySettings.divider ;
+    mBuf[mBufPointer++] = _buffer[i].g /mySettings.divider ;
+    mBuf[mBufPointer++] = _buffer[i].r /mySettings.divider ;
   }
+  _myspi.writeBytes((uint8_t*)mBuf, (int)mBufPointer);
   endFrame(_length);
 }
 
 void ledDriver::clear(){
   startFrame();
   CRGB val = {0, 0, 0};
-  for(uint8_t i=0; i<_length; i++){
-    sendColor(val);    
+  uint8_t mBuf[_length*4];
+  int mBufPointer = 0;
+  
+  for(int i=0; i<_length; i++){
+    mBuf[mBufPointer++] = 0b11100000 | mySettings.brightnessRaw ;
+    mBuf[mBufPointer++] = 0;
+    mBuf[mBufPointer++] = 0 ;
+    mBuf[mBufPointer++] = 0 ;  
   }
-
+  _myspi.writeBytes((uint8_t*)mBuf, (int)mBufPointer);
   endFrame(_length);
 }
+
+
 

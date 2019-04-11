@@ -29,7 +29,7 @@ Settings mySettings;                   // Initialize settings object
  */
 void initComm()
 {
-  debug("Initializing Serial Communication" );
+  debugln("Initializing Serial Communication" );
   mySerial.begin(myBaudRate, SERIAL_8N1, SLAVE1_RX, SLAVE1_TX);
   mySerial.setTimeout(2000);
 
@@ -188,10 +188,11 @@ void commParser()
 
     dataStoreBckup._buffer[count] = (uint8_t*)malloc( sColumn);
     memcpy( dataStoreBckup._buffer[count], col, sColumn );
-
+    debug('.');
     sendBuf(col+sColumn, 2);    // reply to reply with crc of msg
     count++;
   }
+  debugln("");
   debugln("OK: Complete Image data received");
 
   debugln("INIT: Copying data from backup buffer to main buffer.");
@@ -199,6 +200,8 @@ void commParser()
   debugln("OK: Done copying data to main buffer");
 
   setArmData(dataStore._buffer, dataStore._noColumns);
+
+  resetArms();
   
   if(arm1.isTaskCreated() && arm2.isTaskCreated()){
     arm1.resume();          // resume task if already created
@@ -227,7 +230,7 @@ bool waitForData(uint8_t* buf, uint16_t len)
    auto ans = mySerial.readBytes( buf, len);
    serClear();
    if(ans == len){
-    dumpBuf(buf, len);
+    //dumpBuf(buf, len);
     return true;
    }
    else return false;
@@ -288,12 +291,7 @@ unsigned short crc(const unsigned char* data_p, unsigned char length)
 // check if the crc of a buffer is correct
 bool checkCrc(uint8_t* buf, uint16_t buflen){
   uint16_t tempCrc = (buf[buflen-2]<<8 | buf[buflen-1]);
-  Serial.print("Original Crc: ");
-  Serial.println(tempCrc, HEX); 
-
   unsigned short ncrc =  crc(buf, buflen-2);
-  Serial.print("New Crc: ");
-  Serial.println(ncrc, HEX); 
   
   if( ncrc!= tempCrc ){   // check crc, last 2 members of array is the crc16
     debug("ERROR: Wrong crc");

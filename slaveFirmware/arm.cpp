@@ -18,10 +18,7 @@ void IRAM_ATTR arm::execIsr(){
    *  ISR will start the animation if it has not started, or reset columnPointer to zero
    *  which means that we hav reached the 180 degrees point
    */
-   portENTER_CRITICAL_ISR(&mux);
-   //debugln("ARM: Restarting Image on arm: " + String(arm_no) );
-    //_colPointer = 0;
-    if(dir){
+   if(dir){
       _colPointer = 0;
       dir = false;
     }
@@ -29,16 +26,15 @@ void IRAM_ATTR arm::execIsr(){
       _colPointer = _noColumns - 1;
       dir = true;
     }
-   portEXIT_CRITICAL_ISR(&mux);
+   xHigherPriorityTaskWoken = pdTRUE;
+   xSemaphoreGiveFromISR(mSema,  &xHigherPriorityTaskWoken);
+   
 }
 
 
-void arm::showColumn(uint8_t* buf){
-    portENTER_CRITICAL_ISR(&mux);     // mutex will prevent 2 cores from accessing memory at the same time
+void arm::showColumn(uint8_t* buf){   
     leds->setBuffer(buf, _len);
     leds->show();
-    portEXIT_CRITICAL_ISR(&mux);
-     
 }
 
 
@@ -50,36 +46,27 @@ void arm::setCore(uint8_t core){
 void arm::showImage(){
   debugln("INIT: Showing Image on arm: " + String(arm_no));
   Serial.print("no columns: "); Serial.println(_noColumns);
+  mSema =xSemaphoreCreateBinary();
+  
   while(1){
-    isRunning = true;
-    
-    // show image according to direction
+    xSemaphoreTake( mSema, portMAX_DELAY );
     if(dir){
-       portENTER_CRITICAL_ISR(&mux);    // these mutexes fixed, crash problem, because, they ensure that the value of _colPointer is being updated only once at a time
-      if(_colPointer >= 0  ){
+      while(_colPointer >= 0){
+        if(_colPointer >= _noColumns) break;
         showColumn( _imgData[_colPointer] );        // show the next column
-        _colPointer   = (_colPointer - 1);         
-        portEXIT_CRITICAL_ISR(&mux);
+        _colPointer = _colPointer - 1 ;
         delayMicroseconds(mySettings.delayBtwColumns);
       }
-      else{
-        portEXIT_CRITICAL_ISR(&mux);
-        leds->clear();
+    }else{
+      while(_colPointer < _noColumns){
+        if(_colPointer < 0) break;
+        showColumn( _imgData[_colPointer] );        // show the next column
+        _colPointer = _colPointer + 1 ;
+        delayMicroseconds(mySettings.delayBtwColumns);
       }
     }
-    else{
-      portENTER_CRITICAL_ISR(&mux);
-      if(_colPointer < _noColumns){
-        showColumn( _imgData[_colPointer] );        // show the next column
-        _colPointer   = (_colPointer + 1);          // increment the column pointer and make sure that we dont exceed the maximum
-        portEXIT_CRITICAL_ISR(&mux);
-        delayMicroseconds(mySettings.delayBtwColumns);
-      }
-      else{
-        portEXIT_CRITICAL_ISR(&mux);
-        leds->clear();
-      }
-    }    
+    leds->clear();
+    
   }
 }
 
@@ -131,3 +118,4 @@ void setArmData(uint8_t** buf, int newlen){
   
   debugln("New Data copied to arm buffers");
 }
+

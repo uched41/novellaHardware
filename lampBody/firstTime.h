@@ -1,7 +1,7 @@
 #ifndef FIRST_TIME_H
 #define FIRST_TIME_H
 
-#define AUTOCONNECT_NAME     "Novella Lampbody"
+#define AUTOCONNECT_NAME     "POVLAMP Lampbody"
 #define AUTOCONNECT_PASSWORD "novellaP"
 #define CONFIG_FILENAME      "/myConfig.txt"
 
