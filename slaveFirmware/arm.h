@@ -10,6 +10,7 @@ class arm{
     TaskHandle_t _mytask;            
     SemaphoreHandle_t  mSema;
     BaseType_t xHigherPriorityTaskWoken;
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     
     volatile int _colPointer = 0;        // variable that points to the current column being displayed
     volatile bool dir = false;               // variable that determines direction
@@ -39,7 +40,7 @@ void setArmData(uint8_t** buf, int newlen);
 
 // declare arms
 extern arm arm1;
-extern arm arm2;
+//extern arm arm2;
 
 
 #endif

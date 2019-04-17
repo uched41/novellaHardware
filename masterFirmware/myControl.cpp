@@ -80,8 +80,7 @@ void mqttInit(void){
 // Call back function to process received data
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
   bool sendToSlave = false;
-  debug("MQTT: Message arrived [");  debug(topic); debugln("] ");
-  
+    
   char* sBuf[length];
   memcpy(sBuf, payload, length);
   
@@ -92,11 +91,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
   // Receiving file
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
 
-    //dumpBuf(payload, length);
-    
     if(tstring.indexOf("mid") > -1){   // receiving file content
       memcpy(mqttStore._buffer[mqttStore.scount], payload, FILE_BUF_SIZE);
       mqttStore.scount = mqttStore.scount + 1;
+      debug('.');
       mqttReply("OK");
     }
     else if(tstring.indexOf("start") > -1){  // check is this is a start message
@@ -118,14 +116,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       mqttReply("OK");
     }
     else if(tstring.indexOf("end") > -1){    // handle end of file reception
-      debug("MQTT: File data received: "); debugln(mfname.c_str());
+      debug("\nMQTT: File data received: "); debugln(mfname.c_str());
       mqttFile = SPIFFS.open(mfname.c_str(), FILE_WRITE);
       if(!mqttFile){
         errorHandler("Error opening file");
       }
 
       for(int i=0; i< mqttStore._noColumns; i++){
-        ///dumpBuf(mqttStore._buffer[i], FILE_BUF_SIZE);
         mqttFile.write(mqttStore._buffer[i], FILE_BUF_SIZE); 
       }
       mqttFile.close();
@@ -135,9 +132,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     }
     return ;
   }
-
+  
   // Receiving command
   else if(root.containsKey("command")){  
+    debug("MQTT: Message arrived [");  debug(topic); debugln("] ");
     printArray((char*)payload, length); 
     String cmd = root["command"];
 
@@ -170,7 +168,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     // Command to stop display
     else if(cmd == "Stop_Display"){
       arm1.stop();
-      arm2.stop();
+      //arm2.stop();
       mqttReply("OK");
       sendToSlave = true;
     }
@@ -324,7 +322,7 @@ void mqttReply(char* msg){
   char* temp1;
   temp1 = (char*)malloc(root.measureLength()+1);
   root.printTo(temp1, root.measureLength()+1);
-  debug("MQTT Output: "); debugln(temp1);
+  //debug("MQTT Output: "); debugln(temp1);
   
   mqttclient.publish(mqtt_output_topic, temp1);
   free(temp1);
@@ -354,7 +352,7 @@ bool startImage(const char* img){
   if(!res) return false;
   
   arm1.stop();
-  arm2.stop();
+  //arm2.stop();
 
   statusLed.onTransferring();
  /* if(!slave1.attemptSend()){   // send to slave1
@@ -369,13 +367,13 @@ bool startImage(const char* img){
 
   resetArms();
   
- if(arm1.isTaskCreated() && arm2.isTaskCreated()){
+ if(arm1.isTaskCreated()){
     arm1.resume();          // resume task if already created
-    arm2.resume();
+    //arm2.resume();
   }
   else{
     createTask(&arm1);          // Create task if not already created
-    createTask(&arm2);
+    //createTask(&arm2);
   }  
   debugln("Image display started");
   statusLed.onDisplaying();

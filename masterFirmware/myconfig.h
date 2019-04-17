@@ -24,18 +24,18 @@ extern volatile bool started_2;
 #define SLAVE1_TX       2     // pins for serial communication with slave
 #define SLAVE1_RX       15
 
-#define DATA_PIN1       13    // SPI1 pins
-#define MISO_PIN1       33
-#define CLOCK_PIN1      14
-#define SS_PIN1         32
+#define DATA_PIN1       23    // SPI1 pins was13
+#define MISO_PIN1       19   // was 33
+#define CLOCK_PIN1      18    // was 14
+#define SS_PIN1         22    // was 32
 
-#define DATA_PIN2       23    // SPI2 pins
-#define CLOCK_PIN2      18
-#define MISO_PIN2       19
-#define SS_PIN2         22
+//#define DATA_PIN2       23    // SPI2 pins
+//#define CLOCK_PIN2      18
+//#define MISO_PIN2       19
+//#define SS_PIN2         22
 
 #define RED_LED         27    // leds for status
-#define GREEN_LED       12
+#define GREEN_LED       22
 #define BLUE_LED        21
 
 #define hallSensor1     25    // Trigger pin for arm1, To be connected to HALL SENSOR 1

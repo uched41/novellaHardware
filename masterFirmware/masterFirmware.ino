@@ -14,7 +14,7 @@ slave slave1(SLAVE1_TX, SLAVE1_RX, 1);
 
 // Led arms on master
 arm arm1(HSPI, CLOCK_PIN1, MISO_PIN1, DATA_PIN1, SS_PIN1, IMAGE_HEIGHT, 1);
-arm arm2(VSPI, CLOCK_PIN2, MISO_PIN2, DATA_PIN2, SS_PIN2, IMAGE_HEIGHT, 2);
+//arm arm2(VSPI, CLOCK_PIN2, MISO_PIN2, DATA_PIN2, SS_PIN2, IMAGE_HEIGHT, 2);
 
 // Status leds
 StatusLed statusLed(RED_LED, GREEN_LED, BLUE_LED);
@@ -28,8 +28,6 @@ volatile bool started_2 = false;
 portMUX_TYPE serMutex = portMUX_INITIALIZER_UNLOCKED;  // mutex for sending to slave
 
 void setup(){
-  //rtc_clk_cpu_freq_set(RTC_CPU_FREQ_240M);
-  //esp_task_wdt_init(5, false);
   myInit();          // Initialization
   networkInit();
   mqttInit();
@@ -59,7 +57,7 @@ void myInit(){
   // Initialize reset pin
   pinMode(RESET_SWITCH, INPUT);    
   digitalWrite(RESET_SWITCH, LOW);
-  //attachInterrupt(digitalPinToInterrupt(RESET_SWITCH), resetIsr, RISING );
+  attachInterrupt(digitalPinToInterrupt(RESET_SWITCH), resetIsr, RISING );
 }
 
 // Isr to trigger reset task
@@ -86,7 +84,7 @@ void resetTask(void *pvparameters){
 // Initialize the slave part of our master
 void armsInit(void){
   arm1.setCore(1);  // set up arms, let both arm tasks run on core 0
-  arm2.setCore(1);
+  //arm2.setCore(1);
   setupIsr();
 }
 

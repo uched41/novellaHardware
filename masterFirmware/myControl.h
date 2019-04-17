@@ -122,44 +122,48 @@ class StatusLed{
       pinMode(r, OUTPUT);
       pinMode(g, OUTPUT);
       pinMode(b, OUTPUT);
+
+      digitalWrite(r, HIGH);  // Set pins high because of anode cond
+      digitalWrite(g, HIGH);
+      digitalWrite(b, HIGH);
     }
 
     void red(){
-      digitalWrite(r, HIGH);
-      digitalWrite(g, LOW);
-      digitalWrite(b, LOW);
+      digitalWrite(r, LOW);
+      digitalWrite(g, HIGH);
+      digitalWrite(b, HIGH);
     }
 
     void green(){
-      digitalWrite(g, HIGH);
-      digitalWrite(r, LOW);
-      digitalWrite(b, LOW);
+      digitalWrite(g, LOW);
+      digitalWrite(r, HIGH);
+      digitalWrite(b, HIGH);
     }
 
     void blue(){
-      digitalWrite(b, HIGH);
-      digitalWrite(r, LOW);
-      digitalWrite(g, LOW);
+      digitalWrite(b, LOW);
+      digitalWrite(r, HIGH);
+      digitalWrite(g, HIGH);
     }
 
     void yellow(){
-      digitalWrite(r, HIGH);
-      digitalWrite(g, HIGH);
-      digitalWrite(b, LOW);
+      digitalWrite(r, LOW);
+      digitalWrite(g, LOW);
+      digitalWrite(b, HIGH);
     }
 
     void purple(){
-      digitalWrite(r, HIGH);
-      digitalWrite(g, LOW);
-      digitalWrite(b, HIGH);
+      digitalWrite(r, LOW);
+      digitalWrite(g, HIGH);
+      digitalWrite(b, LOW);
     }
     
     void flashRed(uint8_t count) {
       off();
       while(count--){
-        digitalWrite(r, HIGH);
-        delay(STATUS_FLASH_INTERVAL);
         digitalWrite(r, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(r, HIGH);
         delay(STATUS_FLASH_INTERVAL);
       }  
     }
@@ -167,9 +171,9 @@ class StatusLed{
     void flashGreen(uint8_t count) {
       off();
       while(count--){
-        digitalWrite(g, HIGH);
-        delay(STATUS_FLASH_INTERVAL);
         digitalWrite(g, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(g, HIGH);
         delay(STATUS_FLASH_INTERVAL);
       }
     }
@@ -177,9 +181,9 @@ class StatusLed{
     void flashBlue(uint8_t count)  {
       off();
       while(count--){
-        digitalWrite(b, HIGH);
-        delay(STATUS_FLASH_INTERVAL);
         digitalWrite(b, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(b, HIGH);
         delay(STATUS_FLASH_INTERVAL);
       }
     }
@@ -187,18 +191,18 @@ class StatusLed{
     void flashYellow(uint8_t count){
       off();
       while(count--){
-        digitalWrite(r, HIGH);
-        digitalWrite(g, HIGH);
-        delay(STATUS_FLASH_INTERVAL);
         digitalWrite(r, LOW);
         digitalWrite(g, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(r, HIGH);
+        digitalWrite(g, HIGH);
       }
     }
 
     void off(){   // function to put off all eds
-      digitalWrite(b, LOW);
-      digitalWrite(g, LOW);
-      digitalWrite(r, LOW);
+      digitalWrite(b, HIGH);
+      digitalWrite(g, HIGH);
+      digitalWrite(r, HIGH);
     }
 
     void onDisplaying(){

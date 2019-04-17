@@ -105,7 +105,6 @@ void commParser()
       else if(cmd == "Stop_Display"){
         debugln("MQTT: Stopping display");
         arm1.stop();
-        arm2.stop();
       }
 
       // set brightness value
@@ -175,6 +174,9 @@ void commParser()
   debugln("INIT: Receiving data from master: " );
   
   sendBuf((uint8_t*)readySignal, buflen(readySignal));
+  if(arm1.isTaskCreated()){
+    arm1.stop();          // resume task if already created
+  }
   
   while(count < noCols)
   {
@@ -203,16 +205,14 @@ void commParser()
 
   resetArms();
   
-  if(arm1.isTaskCreated() && arm2.isTaskCreated()){
-    arm1.resume();          // resume task if already created
-    arm2.resume();
+freeBackup:
+  if(arm1.isTaskCreated()){
+      arm1.resume();          // resume task if already created
   }
   else{
-    createTask(&arm1);          // Create task if not already created
-    createTask(&arm2);
+     createTask(&arm1);          // Create task if not already created
   }  
-
-freeBackup:
+  
   for(uint8_t i=0; i< count; i++){    // Free only the buffers that have been assigned
     free(dataStoreBckup._buffer[i]);
   }

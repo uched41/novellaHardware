@@ -40,7 +40,7 @@ void setArmData(uint8_t** buf, int newlen);
 
 // declare arms
 extern arm arm1;
-extern arm arm2;
+//extern arm arm2;
 
 
 #endif
