@@ -2,6 +2,7 @@
 #define ARM_H
 
 #include "led_driver.h"
+#include "myControl.h"
 
 class arm{
 
@@ -13,6 +14,7 @@ class arm{
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     
     volatile int _colPointer = 0;        // variable that points to the current column being displayed
+    volatile int _imgPointer = 0;
     volatile bool dir = false;               // variable that determines direction
     
     uint8_t arm_no=0;
@@ -20,8 +22,7 @@ class arm{
     int _len;                                // length of this arm, (no of leds)
     volatile bool taskCreated;
     volatile bool isRunning;
-    static uint8_t** _imgData;        // pointer to where the data of columns is located
-    static int _noColumns;
+    static ARM_DATA* _imgData;        // pointer to where the data of columns is located
   
     void showColumn(uint8_t* buf);    // Function that will show a column
     void showImage();
@@ -36,11 +37,10 @@ class arm{
     bool isTaskCreated();
 };
 
-void setArmData(uint8_t** buf, int newlen);
+void setArmData(ARM_DATA* buf);
 
 // declare arms
 extern arm arm1;
-//extern arm arm2;
 
 
 #endif

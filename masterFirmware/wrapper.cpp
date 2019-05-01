@@ -7,14 +7,11 @@ void setupIsr(){
   pinMode(hallSensor1, INPUT_PULLUP);
   pinMode(hallSensor2, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(hallSensor1), isr1, CHANGE);
-  //attachInterrupt(digitalPinToInterrupt(hallSensor2), isr2, CHANGE);
 }
 
 void resetArms(){
   started_1 = false;
-  //started_2 = false;
   arm1.dir = false;
-  //arm2.dir = false;
 }
 
 void IRAM_ATTR isr1(){
@@ -31,27 +28,11 @@ void IRAM_ATTR isr1(){
   portEXIT_CRITICAL_ISR(&(arm1.mux));
 }
 
-/*void IRAM_ATTR isr2(){
-  portENTER_CRITICAL_ISR(&(arm2.mux));
-  if(!started_2){
-    if(digitalRead(hallSensor2)){     // if we have not started, start only if we are latched to high
-      started_2 = true;
-      arm2.execIsr();
-    }
-  }
-  else{
-    arm2.execIsr();
-  }
-  portEXIT_CRITICAL_ISR(&(arm2.mux));
-}*/
 
 void Arm1Task(void *pvparameters){
   arm1.showImage();
 }
 
-/*void Arm2Task(void *pvparameters){
-  arm2.showImage();
-}*/
 
 bool createTask(arm* myarm){
   if(myarm->_imgData == NULL){         // make sure that the image data location has been set
@@ -74,11 +55,7 @@ bool createTask(arm* myarm){
        myarm->_core);        /* Core where the task should run */
 
     }
-    else{
-     
-
-    }
-
+   
     myarm->taskCreated = true;
   }
   else{

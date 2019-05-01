@@ -110,8 +110,10 @@ bool slave::sendData()
   debugln("COMM: Sending Initialization signal");
   
   // generate message to send
-  dataSignal[4] = (uint8_t)( ( dataStore._noColumns & 0xff00 ) >> 8 );
-  dataSignal[5] = (uint8_t)( dataStore._noColumns & 0x00ff );
+  dataSignal[2] = (uint8_t)( ( tempStore._noImages & 0xff00 ) >> 8 );
+  dataSignal[3] = (uint8_t)( tempStore._noImages & 0x00ff );
+  dataSignal[4] = (uint8_t)( ( tempStore._noColumnsPerImage & 0xff00 ) >> 8 );
+  dataSignal[5] = (uint8_t)( tempStore._noColumnsPerImage & 0x00ff );
   tempCrc = crc(dataSignal, 6);
   dataSignal[6] = (uint8_t)((tempCrc&0xff00)>>8);   // add crc to back of message
   dataSignal[7] = (uint8_t)(tempCrc&0x00ff);
@@ -124,25 +126,28 @@ bool slave::sendData()
     }
   debugln("COMM: Slave responded");
 
-  // Start sending columns
-  for(uint16_t it=0; it<dataStore._noColumns; it++)
-  {
-    memcpy(columnBuf, dataStore._buffer[it], sColumn );
-    tempCrc = crc(columnBuf, sColumn);
-    columnBuf[ sColumn ] = (uint8_t)( (tempCrc&0xff00)>>8);    // append crc to last 2 bytes of array
-    columnBuf[ sColumn+1 ] = (uint8_t)( tempCrc&0x00ff);
-
-    sendBuf(columnBuf, sColumn+2);    // send the message and wait for reply
-    //dumpBuf(columnBuf, sColumn+2);
-    debug('.');
-    
-    if( !waitForData(tempBuf, 2) ) {  // the slave will reply with the crc of last data sent
-      errorHandler("ERROR: Slave did not respond"); return 0;
-      }
-    if( (uint16_t)((tempBuf[0]<<8) | (tempBuf[1])) != tempCrc ) {
-      errorHandler("ERROR: Incorrect Crc"); return 0;
-      }
+  // Start sending data
+  for(int k=0; k<tempStore._noImages; k++){   // Iterate through images
+    debugln("Sending Image no: " + String(k));
+    for(uint16_t it=0; it<tempStore._noColumnsPerImage; it++){  // Iterate through columns
+      memcpy(columnBuf, tempStore._frames[k]->_data[it], sColumn );
+      tempCrc = crc(columnBuf, sColumn);
+      columnBuf[ sColumn ] = (uint8_t)( (tempCrc&0xff00)>>8);    // append crc to last 2 bytes of array
+      columnBuf[ sColumn+1 ] = (uint8_t)( tempCrc&0x00ff);
+  
+      sendBuf(columnBuf, sColumn+2);    // send the message and wait for reply
+      //dumpBuf(columnBuf, sColumn+2);
+      debug('.');
+      
+      if( !waitForData(tempBuf, 2) ) {  // the slave will reply with the crc of last data sent
+        errorHandler("ERROR: Slave did not respond"); return 0;
+        }
+      if( (uint16_t)((tempBuf[0]<<8) | (tempBuf[1])) != tempCrc ) {
+        errorHandler("ERROR: Incorrect Crc"); return 0;
+        }
+    }
   }
+  
 
   debugln("");
   debugln("COMM: SUCCESS: Complete data sent");

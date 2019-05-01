@@ -31,10 +31,10 @@ int FILE_BUF_SIZE = 512;    // must correlate with mqtt buf size
 
 File mqttFile;
 
-DataBuffer dataStore(sColumn);         // Data storer object
-DataBuffer mqttStore(FILE_BUF_SIZE);
-
-Settings mySettings;                   // Initialize settings object
+//DataBuffer dataStore(sColumn);          // Data storer object
+DataBuffer mqttStore(FILE_BUF_SIZE);    // This uses a bigger column size because it is used to store data received from mqtt temporarily before it is saved to a file.
+ARM_DATA  tempStore;                 // Stores data in the same structure that it is displayed with
+Settings mySettings;                    // Initialize settings object
   
 // function to initiialize mqtt
 void mqttInit(void){
@@ -111,7 +111,10 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       debug("MQTT: Receiving file: "); debugln(filen); 
       debug("MQTT: No of lines "); debugln(flen);
       debugln("Initializing buffer ..");
-      mqttStore.initBuffer(flen);
+      if(!mqttStore.initBuffer(flen)) {
+        debugln("Failed to receive image");
+        return;
+      }
       mqttStore.scount = 0;    
       mqttReply("OK");
     }
@@ -125,6 +128,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       for(int i=0; i< mqttStore._noColumns; i++){
         mqttFile.write(mqttStore._buffer[i], FILE_BUF_SIZE); 
       }
+      mqttStore.clearBuffer();
+      
       mqttFile.close();
       debugln("MQTT: File received successfully.");
       mqttReply("OK");
@@ -348,32 +353,20 @@ void mqttCommand(char* msg){
 bool startImage(const char* img){
   debugln("Starting Image, " + String(img));
  
-  bool res = dataStore.setBuffer(img);   // copy data from file into buffer
+  bool res = tempStore.readFromFile(img);   // copy data from file into buffer
   if(!res) return false;
   
   arm1.stop();
-  //arm2.stop();
-
   statusLed.onTransferring();
- /* if(!slave1.attemptSend()){   // send to slave1
-    debugln("MQTT: Unable to send to slave");
-    mqttReply("Error");
-    return 0;
-  }*/
-  
-  debugln("Data sent to slave");
-  mqttReply("OK");
-  setArmData(dataStore._buffer, dataStore._noColumns);
-
+   
+  setArmData(&tempStore);
   resetArms();
   
  if(arm1.isTaskCreated()){
     arm1.resume();          // resume task if already created
-    //arm2.resume();
   }
   else{
     createTask(&arm1);          // Create task if not already created
-    //createTask(&arm2);
   }  
   debugln("Image display started");
   statusLed.onDisplaying();
