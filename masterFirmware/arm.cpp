@@ -32,6 +32,7 @@ void IRAM_ATTR arm::execIsr(){
 
 void arm::showColumn(uint8_t* buf){   
     leds->setBuffer(buf, _len);
+    //dumpBuf(buf, _len*3);
     leds->show();
 }
 
@@ -53,11 +54,11 @@ void arm::showImage(){
     xSemaphoreTake( mSema, 10/portTICK_PERIOD_MS );
     while(_colPointer < _imgData->_noColumnsPerImage){
         if(_colPointer < 0) break;
+        //debugln("Image no: " + String(_imgPointer) + " , column: " + String(_colPointer));
         showColumn( _imgData->_frames[_imgPointer]->_data[_colPointer] );        // show the next column
         _colPointer = _colPointer + 1 ;
         ets_delay_us(mySettings.delayBtwColumns);
      }
-     //_imgPointer = (_imgPointer + 1 ) % (imgData->_noImages);
     leds->clear();
   }
 }
@@ -87,12 +88,17 @@ void arm::resume(){
   else debugln("ARM: No Task found");
 }
 
-void setArmData(ARM_DATA* buf){
+void setArmData(const char* file){
   // first we stop the arms
   debugln("Stopping arms");
   arm1.stop();
+  if(arm::_imgData == NULL ){     // for the first time
+    arm::_imgData = new ARM_DATA();
+  }
+
+  if(arm::_imgData->readFromFile(file) ){
+    debugln("New Data copied to arm buffers");
+  }
   
-  arm::_imgData = buf;    // set pointer, no need to copy
-  debugln("New Data copied to arm buffers");
 }
 

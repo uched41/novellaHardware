@@ -42,7 +42,7 @@ void loop(){
 
 // Function to initialize my settings
 void myInit(){
-  debugSerial.begin(115200);
+  debugSerial.begin(250000);
   debugln("INIT: Setting up file system");
   if(!SPIFFS.begin(true)){
       debugln("INIT: SPIFFS Mount Failed");

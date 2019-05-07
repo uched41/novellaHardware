@@ -37,7 +37,7 @@ class arm{
     bool isTaskCreated();
 };
 
-void setArmData(ARM_DATA* buf);
+void setArmData(const char* file);
 
 // declare arms
 extern arm arm1;

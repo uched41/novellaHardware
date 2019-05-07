@@ -73,7 +73,7 @@ void mqttInit(void){
 
   debug("MQTT Topics: "); debugln(mqtt_input_topic);
   mqttReconnect();
-  mqttCommand("Starting");
+  //mqttCommand("Starting");
 }
 
 
@@ -93,6 +93,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     if(tstring.indexOf("mid") > -1){   // receiving file content
       memcpy(mqttStore._buffer[mqttStore.scount], payload, FILE_BUF_SIZE);
+      //dumpBuf(mqttStore._buffer[mqttStore.scount], FILE_BUF_SIZE);
       mqttStore.scount = mqttStore.scount + 1;
       debug('.');
       mqttReply("OK");
@@ -353,13 +354,13 @@ void mqttCommand(char* msg){
 bool startImage(const char* img){
   debugln("Starting Image, " + String(img));
  
-  bool res = tempStore.readFromFile(img);   // copy data from file into buffer
-  if(!res) return false;
+  //bool res = tempStore.readFromFile(img);   // copy data from file into buffer
+  //if(!res) return false;
   
   arm1.stop();
   statusLed.onTransferring();
    
-  setArmData(&tempStore);
+  setArmData(img);
   resetArms();
   
  if(arm1.isTaskCreated()){
@@ -371,11 +372,11 @@ bool startImage(const char* img){
   debugln("Image display started");
   statusLed.onDisplaying();
 
-  if(!slave1.attemptSend()){   // send to slave1
+  /*if(!slave1.attemptSend()){   // send to slave1
     debugln("MQTT: Unable to send to slave");
     mqttReply("Error");
     return 0;
-  }
+  }*/
   
   return 1;
 }

@@ -79,6 +79,7 @@ class DataBuffer{
         _buffer[i] = newBuf;
       }
       _noColumns = len;
+      debugln("Buffer Initialized");
       return 1;
     }
     
@@ -142,7 +143,7 @@ struct Img{
   
   bool initBuffer(int len){
     clearBuffer();
-    debugln("Initializing Image buffer");
+    //debugln("Initializing Image buffer");
     _data = (uint8_t**)ps_malloc( sizeof(uint8_t*)*len );
     for(int i=0; i<len; i++){
       uint8_t* newBuf = (uint8_t*)ps_malloc(_columnLength);
@@ -158,7 +159,7 @@ struct Img{
   }
     
   void clearBuffer(){     
-    Serial.println("IMG: clearing buffer");
+    //Serial.println("IMG: clearing buffer");
     for(int i=0; i<_noColumns; i++){
       free(_data[i]);
     }
@@ -237,6 +238,7 @@ struct Gif{
     for(int i=0; i<noImages; i++){   // Iterate through images
       for(int j=0; j<noCols; j++){   // Iterate through columns
         file.readBytes((char*)_frames[i]->_data[j], sColumn);
+        //dumpBuf(_frames[i]->_data[j], sColumn);
       }
     }
 
