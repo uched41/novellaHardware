@@ -353,9 +353,6 @@ void mqttCommand(char* msg){
 // Function to start displaying image
 bool startImage(const char* img){
   debugln("Starting Image, " + String(img));
- 
-  //bool res = tempStore.readFromFile(img);   // copy data from file into buffer
-  //if(!res) return false;
   
   arm1.stop();
   statusLed.onTransferring();
@@ -372,11 +369,16 @@ bool startImage(const char* img){
   debugln("Image display started");
   statusLed.onDisplaying();
 
-  /*if(!slave1.attemptSend()){   // send to slave1
+  if(!tempStore.readFromFile(img)) {
+    debugln("Failed to set buffer");
+    return false;
+  }
+  if(!slave1.attemptSend()){   // send to slave1
     debugln("MQTT: Unable to send to slave");
     mqttReply("Error");
     return 0;
-  }*/
+  }
+  tempStore.clearGif();
   
   return 1;
 }

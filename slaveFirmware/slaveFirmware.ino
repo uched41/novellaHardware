@@ -15,7 +15,7 @@ volatile bool started_2 = false;
 
 void setup()
 {
-  debugSerial.begin(115200);
+  debugSerial.begin(250000);
 
   // initialize arms
   arm1.setCore(1);

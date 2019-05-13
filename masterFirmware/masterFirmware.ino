@@ -81,7 +81,7 @@ void resetTask(void *pvparameters){
 
 // Initialize the slave part of our master
 void armsInit(void){
-  arm1.setCore(1);  
+  arm1.setCore(0);  
   setupIsr();
 }
 

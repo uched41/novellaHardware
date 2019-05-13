@@ -21,7 +21,7 @@ uint8_t* tempBuf;           // Temporary Buffer for storing
 uint8_t brightnessMode = 0;
 uint8_t brightnessVal = 1;
 
-DataBuffer dataStore(sColumn);         // Data storer object
+ARM_DATA tempStore;         // Data storer object
 Settings mySettings;                   // Initialize settings object
 
 /*
@@ -150,7 +150,7 @@ void commParser()
   /*
     Parse Data message
   */
-  if( !isEqual(tempBuf, (uint8_t*)dataSignal, 4 ) ){
+  if( !isEqual(tempBuf, (uint8_t*)dataSignal, 2 ) ){
     debugln("ERROR: Wrong starting sequence"); 
     serClear(); return ;
   }
@@ -162,47 +162,60 @@ void commParser()
   }
 
   //serClear();
+  uint16_t noImgs = tempBuf[2]<<8 | tempBuf[3];
   uint16_t noCols = tempBuf[4]<<8 | tempBuf[5];
 
-  DataBuffer dataStoreBckup(sColumn);
-  dataStoreBckup._noColumns = noCols;
+  ARM_DATA bckUpStore;
+  bckUpStore.initGif(noImgs, sColumn, noCols);
   
-  dataStoreBckup._buffer = (uint8_t**)malloc( sizeof(uint8_t*)*noCols );  // allocating new backup buffers
   uint8_t* col = (uint8_t*)malloc( sColumn + 2);
 
-  uint16_t count=0;   // read all the columns
+  uint16_t imgCount = 0;
+  uint16_t colCount = 0;   // read all the columns
   debugln("INIT: Receiving data from master: " );
+  debugln("Number of Images: " + String(bckUpStore._noImages));
+  debugln("NUmber of columns per image: " + String(bckUpStore._noColumnsPerImage));
   
   sendBuf((uint8_t*)readySignal, buflen(readySignal));
   if(arm1.isTaskCreated()){
     arm1.stop();          // resume task if already created
   }
-  
-  while(count < noCols)
-  {
-    if( !waitForData(col, sColumn+2 ) ) {
-      debugln("ERROR: No Data received from master"); serClear();
-      goto freeBackup;      // free allocated memory before exiting
+
+  while(imgCount < bckUpStore._noImages){
+    while(colCount < bckUpStore._noColumnsPerImage){
+      if( !waitForData(col, sColumn+2 ) ) {
+        debugln("ERROR: No Data received from master"); serClear();
+        goto freeBackup;      // free allocated memory before exiting
       }
-
-    if(!checkCrc(col, sColumn+2))
-      goto freeBackup;      // free allocated memory before exiting
-
-    dataStoreBckup._buffer[count] = (uint8_t*)malloc( sColumn);
-    memcpy( dataStoreBckup._buffer[count], col, sColumn );
+      
+      if(!checkCrc(col, sColumn+2)){
+        goto freeBackup;      // free allocated memory before exiting
+      }
+       
+      memcpy( bckUpStore._frames[imgCount]->_data[colCount], col, sColumn );
+      //dumpBuf(col, sColumn);
+      sendBuf(col+sColumn, 2);    // reply to reply with crc of msg
+      colCount++;
+    }
+    colCount = 0;
     debug('.');
-    sendBuf(col+sColumn, 2);    // reply to reply with crc of msg
-    count++;
+    imgCount++;
+    vTaskDelay(5/ portTICK_PERIOD_MS);
   }
+  
   debugln("");
   debugln("OK: Complete Image data received");
-
+  
+  tempStore.initGif(noImgs, sColumn, noCols);
   debugln("INIT: Copying data from backup buffer to main buffer.");
-  dataStore.setBuffer( dataStoreBckup._buffer, noCols);
+  for(int i=0; i<noImgs; i++){
+    for(int j=0; j<noCols; j++){
+      memcpy(tempStore._frames[i]->_data[j], bckUpStore._frames[i]->_data[j], sColumn);
+    }
+  }
   debugln("OK: Done copying data to main buffer");
 
-  setArmData(dataStore._buffer, dataStore._noColumns);
-
+  setArmData(&tempStore);
   resetArms();
   
 freeBackup:
@@ -213,12 +226,10 @@ freeBackup:
      createTask(&arm1);          // Create task if not already created
   }  
   
-  for(uint8_t i=0; i< count; i++){    // Free only the buffers that have been assigned
-    free(dataStoreBckup._buffer[i]);
-  }
+  bckUpStore.clearGif();
   debugln("OK: Done Freeing backup buffers");
-  debug("Num Columns: "); Serial.println(dataStore._noColumns);
   free(col);
+  serClear();
 }
 
 

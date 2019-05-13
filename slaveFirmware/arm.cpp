@@ -3,8 +3,7 @@
 #include "wrapper.h"
 #include "comm.h"
 
-uint8_t** arm::_imgData = NULL;
-int arm::_noColumns = 0;
+ARM_DATA* arm::_imgData = NULL;
 
 arm::arm(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t dataPin, uint8_t ssPin, int len, uint8_t armno){
   leds = new ledDriver(myspi, clkPin, misoPin, dataPin, ssPin);
@@ -18,7 +17,9 @@ void IRAM_ATTR arm::execIsr(){
    *  ISR will start the animation if it has not started, or reset columnPointer to zero
    *  which means that we hav reached the 180 degrees point
    */
+   if(_imgData == NULL) return;
     _colPointer = 0;
+    _imgPointer = (_imgPointer + 1 ) % (_imgData->_noImages);    // go to next image
    //if(mSema != NULL)
    {
     xHigherPriorityTaskWoken = pdTRUE;
@@ -30,6 +31,7 @@ void IRAM_ATTR arm::execIsr(){
 
 void arm::showColumn(uint8_t* buf){   
     leds->setBuffer(buf, _len);
+    //dumpBuf(buf, _len*3);
     leds->show();
 }
 
@@ -41,21 +43,24 @@ void arm::setCore(uint8_t core){
 
 void arm::showImage(){
   debugln("INIT: Showing Image on arm: " + String(arm_no));
-  Serial.print("no columns: "); Serial.println(_noColumns);
+  Serial.print("No Images: "); Serial.println(_imgData->_noImages);
+  Serial.print("No Columns: "); Serial.println(_imgData->_noColumnsPerImage);
+  _imgPointer = 0;
+  _colPointer = 0;
   mSema =xSemaphoreCreateBinary();
   
   while(1){
-    xSemaphoreTake( mSema, 10/portTICK_PERIOD_MS );
-    while(_colPointer < _noColumns){
+    xSemaphoreTake( mSema, portMAX_DELAY );    // 10/portTICK_PERIOD_MS
+    while(_colPointer < _imgData->_noColumnsPerImage){
         if(_colPointer < 0) break;
-        showColumn( _imgData[_colPointer] );        // show the next column
+        //debugln("Image no: " + String(_imgPointer) + " , column: " + String(_colPointer));
+        showColumn( _imgData->_frames[_imgPointer]->_data[_colPointer] );        // show the next column
         _colPointer = _colPointer + 1 ;
         ets_delay_us(mySettings.delayBtwColumns);
-      }
+     }
     leds->clear();
   }
 }
-
 
 
 bool arm::isTaskCreated(){
@@ -82,27 +87,27 @@ void arm::resume(){
   else debugln("ARM: No Task found");
 }
 
-void setArmData(uint8_t** buf, int newlen){
+void setArmData(const char* file){
   // first we stop the arms
   debugln("Stopping arms");
   arm1.stop();
-  //arm2.stop();
-
-  // then we clear the current buffers
-  debugln("Freeing old memory");
-  for(int i=0; i<arm::_noColumns; i++){
-    free(arm::_imgData[i]);
+  if(arm::_imgData == NULL ){     // for the first time
+    arm::_imgData = new ARM_DATA();
   }
 
-  // copy new data
-  arm::_imgData = (uint8_t**)malloc( sizeof(uint8_t*)*newlen);
-  for(int i=0; i<newlen; i++){
-    arm::_imgData[i] = (uint8_t*)malloc(sColumn);
-    memcpy(arm::_imgData[i], buf[i], sColumn);
+  if(arm::_imgData->readFromFile(file) ){
+    debugln("New Data copied to arm buffers");
   }
-
-  arm::_noColumns = newlen;
-  
-  debugln("New Data copied to arm buffers");
 }
 
+void setArmData(ARM_DATA* newBuf){
+  // first we stop the arms
+  debugln("Stopping arms");
+  arm1.stop();
+  if(arm::_imgData == NULL ){     // for the first time
+    arm::_imgData = new ARM_DATA();
+  }
+
+  arm::_imgData = newBuf;
+  debugln("New Data copied to arm buffers");
+}

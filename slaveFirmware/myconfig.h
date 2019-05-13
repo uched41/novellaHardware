@@ -33,7 +33,7 @@ extern volatile bool started_2;
 // Serial communication pins for slave1
 #define SLAVE1_TX 2
 #define SLAVE1_RX 15
-#define myBaudRate 115200
+#define myBaudRate 1000000
 
 #define debugSerial Serial
 #define debugln(c)    debugSerial.println(c)

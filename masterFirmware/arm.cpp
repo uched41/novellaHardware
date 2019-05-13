@@ -19,6 +19,7 @@ void IRAM_ATTR arm::execIsr(){
    *  ISR will start the animation if it has not started, or reset columnPointer to zero
    *  which means that we hav reached the 180 degrees point
    */
+   if(_imgData == NULL) return;
     _colPointer = 0;
     _imgPointer = (_imgPointer + 1 ) % (_imgData->_noImages);    // go to next image
    //if(mSema != NULL)
@@ -51,7 +52,7 @@ void arm::showImage(){
   mSema =xSemaphoreCreateBinary();
   
   while(1){
-    xSemaphoreTake( mSema, 10/portTICK_PERIOD_MS );
+    xSemaphoreTake( mSema, portMAX_DELAY );    // 10/portTICK_PERIOD_MS
     while(_colPointer < _imgData->_noColumnsPerImage){
         if(_colPointer < 0) break;
         //debugln("Image no: " + String(_imgPointer) + " , column: " + String(_colPointer));

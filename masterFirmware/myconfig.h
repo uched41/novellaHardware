@@ -39,12 +39,12 @@ extern volatile bool started_2;
 #define BLUE_LED        21
 
 #define hallSensor1     25    // Trigger pin for arm1, To be connected to HALL SENSOR 1
-#define hallSensor2     26    // Trigger pin for arm2, To be connected to HALL SENSOR 2
+//#define hallSensor2     26    // Trigger pin for arm2, To be connected to HALL SENSOR 2
 
 #define RESET_SWITCH    5
 
 // Debug setup
-#define myBaudRate    115200
+#define myBaudRate    1000000
 #define debugSerial   Serial
 #define debugln(c)    debugSerial.println(c)
 #define debug(c)      debugSerial.print(c)

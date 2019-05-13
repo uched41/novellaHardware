@@ -146,6 +146,7 @@ bool slave::sendData()
         errorHandler("ERROR: Incorrect Crc"); return 0;
         }
     }
+     vTaskDelay(10/ portTICK_PERIOD_MS);
   }
   
 
@@ -158,13 +159,13 @@ bool slave::sendData()
 // Low level function to send buffer
 void slave::sendBuf(uint8_t* buf, uint16_t len)
 {
-  taskENTER_CRITICAL(&serMutex);
+  //taskENTER_CRITICAL(&serMutex);
   for(uint16_t i=0; i< len; i++)
   {
     mySerial->write(buf[i]);
   }
   mySerial->flush();    // wait for transmission of outgoing serial data to complete
-  taskEXIT_CRITICAL(&serMutex);
+  //taskEXIT_CRITICAL(&serMutex);
 }
 
 

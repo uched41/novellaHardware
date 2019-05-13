@@ -4,8 +4,8 @@
 #include "FS.h"
 #include "SPIFFS.h"
 #include "comm.h"
-//#include "esp_spiram.h"
-//#define ps_malloc malloc
+//include "esp_spiram.h"
+//define ps_malloc malloc
 
 #define MQTT_BASE_TOPIC "novella/devices"
 #define MQTT_PING_INTERVAL 10000  //  in milliseconds
