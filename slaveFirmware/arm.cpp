@@ -51,6 +51,7 @@ void arm::showImage(){
   
   while(1){
     xSemaphoreTake( mSema, portMAX_DELAY );    // 10/portTICK_PERIOD_MS
+    ets_delay_us(mySettings.moveDelay);       // move delay for image alignment
     while(_colPointer < _imgData->_noColumnsPerImage){
         if(_colPointer < 0) break;
         //debugln("Image no: " + String(_imgPointer) + " , column: " + String(_colPointer));

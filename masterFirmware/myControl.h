@@ -4,8 +4,8 @@
 #include "FS.h"
 #include "SPIFFS.h"
 #include "comm.h"
-//include "esp_spiram.h"
-//define ps_malloc malloc
+
+//#define ps_malloc malloc
 
 #define MQTT_BASE_TOPIC "novella/devices"
 #define MQTT_PING_INTERVAL 10000  //  in milliseconds
@@ -22,7 +22,8 @@ class Settings{
     uint8_t isPaired = 0;
     
     int delayBtwColumns = 50;
-   
+    int moveDelay = 0;
+    
     void setBrightness(uint8_t val){
       brightnessPercent = val;
       brightnessRaw = map(val, 0, 100, 1, 31);

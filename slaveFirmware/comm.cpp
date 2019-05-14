@@ -124,6 +124,14 @@ void commParser()
         return;
       }
 
+      // set move delay
+      else if(cmd == "Move_Image"){
+        int val = root["value"];
+        debugln("MQTT: Setting move delay: "); debugln(val);
+        mySettings.moveDelay = val;
+        return;
+      }
+
       // set column delay
       else if(cmd == "Divider"){
         debugln("Setting divy");

@@ -236,6 +236,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       sendToSlave = true;
     }
 
+    // Command to set move delay
+    else if(cmd == "Move_Image"){
+      int val = root["value"];
+      debug("MQTT: Setting move delay: "); debugln(val);
+      mySettings.moveDelay = val;
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+
     // Command to set divider
     else if(cmd == "Divider"){
       int val = root["value"];

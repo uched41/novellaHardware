@@ -5,6 +5,8 @@
 #include "SPIFFS.h"
 #include "myconfig.h"
 
+//#define ps_malloc malloc
+
 // Settings object
 class Settings{
   public:
@@ -15,7 +17,8 @@ class Settings{
     uint8_t isPaired = 0;
     
     int delayBtwColumns = 50;
-   
+    int moveDelay = 0;
+    
     void setBrightness(uint8_t val){
       brightnessPercent = val;
       brightnessRaw = map(val, 0, 100, 1, 31);
