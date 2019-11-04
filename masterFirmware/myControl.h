@@ -5,8 +5,6 @@
 #include "SPIFFS.h"
 #include "comm.h"
 
-//#define ps_malloc malloc
-
 #define MQTT_BASE_TOPIC "novella/devices"
 #define MQTT_PING_INTERVAL 10000  //  in milliseconds
 
@@ -23,6 +21,13 @@ class Settings{
     
     int delayBtwColumns = 50;
     int moveDelay = 0;
+    int specialDelay = 0;
+    int slaveDelay = 0;
+    int delay0m = 0;
+    int delay180m = 0;
+    int delay0s = 0;
+    int delay180s = 0;
+    int gifRepeat = 0;
     
     void setBrightness(uint8_t val){
       brightnessPercent = val;
@@ -142,12 +147,22 @@ struct Img{
     clearBuffer();
   }
   
-  bool initBuffer(int len){
+  bool initBuffer(int len, bool use_spiram = true){
     clearBuffer();
     //debugln("Initializing Image buffer");
-    _data = (uint8_t**)ps_malloc( sizeof(uint8_t*)*len );
+    if(use_spiram){
+      _data = (uint8_t**)ps_malloc( sizeof(uint8_t*)*len );
+    }else{
+      _data = (uint8_t**)malloc( sizeof(uint8_t*)*len );
+    }
+    
     for(int i=0; i<len; i++){
-      uint8_t* newBuf = (uint8_t*)ps_malloc(_columnLength);
+      uint8_t* newBuf;
+      if(use_spiram){
+        newBuf = (uint8_t*)ps_malloc(_columnLength);
+      }else{
+        newBuf = (uint8_t*)malloc(_columnLength);
+      }
       if(newBuf == NULL){
         debugln("Mem allocation failed");
         clearBuffer();
@@ -167,7 +182,7 @@ struct Img{
     _noColumns = 0;
   }
 
-  void setBuffer(uint8_t** buf, int noCols){
+  /*void setBuffer(uint8_t** buf, int noCols){
     clearBuffer();
     _data = (uint8_t**)ps_malloc( sizeof(uint8_t*)*noCols );
     for(int i=0; i<noCols; i++){
@@ -177,7 +192,7 @@ struct Img{
     }
     _noColumns = noCols;
     Serial.println("DataBuffer: Done Setting buffer");
-  }
+  }*/
   
 };
 
@@ -193,12 +208,25 @@ struct Gif{
   }
   
   bool initGif(int noImages, int colLength, int noColumns){
-    _frames = (Img**)ps_malloc(sizeof(Img) * noImages);
+    clearGif();
+    if(noImages == 1){
+      _frames = (Img**)malloc(sizeof(Img) * noImages);
+    }else{
+      _frames = (Img**)ps_malloc(sizeof(Img) * noImages);
+    }
+    
     for(int i=0; i<noImages; i++){
       _frames[i] = new Img(colLength);
-      if(!_frames[i]->initBuffer(noColumns)){
-        return 0;
+      if(noImages == 1){
+        if(!_frames[i]->initBuffer(noColumns, false)){
+          return 0;
+        }
+      }else{
+        if(!_frames[i]->initBuffer(noColumns)){
+          return 0;
+        }
       }
+      
     }
      _noImages = noImages;
      _noColumnsPerImage = noColumns;
@@ -296,6 +324,21 @@ class StatusLed{
       digitalWrite(g, HIGH);
       digitalWrite(b, LOW);
     }
+
+    void flashPurple(uint8_t count) {
+      off();
+      while(count--){
+        digitalWrite(r, LOW);
+        digitalWrite(g, HIGH);
+        digitalWrite(b, LOW);
+        delay(STATUS_FLASH_INTERVAL);
+        digitalWrite(r, HIGH);
+        digitalWrite(g, LOW);
+        digitalWrite(b, HIGH);
+        delay(STATUS_FLASH_INTERVAL);
+      }
+      off();
+    }
     
     void flashRed(uint8_t count) {
       off();
@@ -315,6 +358,7 @@ class StatusLed{
         digitalWrite(g, HIGH);
         delay(STATUS_FLASH_INTERVAL);
       }
+      off();
     }
 
     void flashBlue(uint8_t count)  {
@@ -325,6 +369,7 @@ class StatusLed{
         digitalWrite(b, HIGH);
         delay(STATUS_FLASH_INTERVAL);
       }
+      off();
     }
 
     void flashYellow(uint8_t count){
@@ -336,6 +381,7 @@ class StatusLed{
         digitalWrite(r, HIGH);
         digitalWrite(g, HIGH);
       }
+      off();
     }
 
     void off(){   // function to put off all eds
@@ -345,6 +391,7 @@ class StatusLed{
     }
 
     void onDisplaying(){
+      off();
       blue();
     }
 
@@ -355,12 +402,24 @@ class StatusLed{
     void onReceiving(){
       purple();
     }
+
+    void success(){
+      flashGreen(2);
+    }
+
+    void failed(){
+      flashRed(2);
+    }
 };
+
+void startSlave(void);
+void stopSlave();
+void resync(void);
 
 extern StatusLed statusLed;
 
 void mqttInit(void);
-void mqttCallback(char* topic, byte* payload, unsigned int length);
+void IRAM_ATTR mqttCallback(char* topic, byte* payload, unsigned int length);
 void mqttReconnect();
 void mqttLoop();
 void mqttReply(char* msg);
@@ -368,6 +427,7 @@ void mqttPing();
 void splitData(char* filename);
 bool startImage(const char* img);
 void mqttCommand(char* msg);
+inline void mqttSpecialReply(void);
 
 #endif
 

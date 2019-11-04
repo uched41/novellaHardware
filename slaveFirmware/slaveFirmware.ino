@@ -15,13 +15,15 @@ volatile bool started_2 = false;
 
 void setup()
 {
-  debugSerial.begin(250000);
-
+  debugSerial.begin(1000000);
+  disableCore0WDT();
+  disableCore1WDT();
   // initialize arms
   arm1.setCore(1);
   //arm2.setCore(1);
   setupIsr();
-
+  pinMode(SYNC_PIN, INPUT);
+  
   initComm();
   Serial.println("Initialization complete");
 }

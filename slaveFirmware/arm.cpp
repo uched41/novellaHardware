@@ -4,6 +4,23 @@
 #include "comm.h"
 
 ARM_DATA* arm::_imgData = NULL;
+#define myk 80000
+#define myy 80
+
+inline void udelay(int milli){
+  for(int i=0; i< milli; i++){
+    for(int i=0; i<myy; i++){
+      NOP();
+    }
+  }
+}
+inline void cdelay(int milli){
+  for(int i=0; i<milli; i++){
+    for(long i=0; i<myk; i++){
+      NOP();
+    }
+  }
+}
 
 arm::arm(SPIClass myspi, uint8_t clkPin, uint8_t misoPin, uint8_t dataPin, uint8_t ssPin, int len, uint8_t armno){
   leds = new ledDriver(myspi, clkPin, misoPin, dataPin, ssPin);
@@ -19,7 +36,15 @@ void IRAM_ATTR arm::execIsr(){
    */
    if(_imgData == NULL) return;
     _colPointer = 0;
+
+   /*if( _repeatCount >= mySettings.gifRepeat ){
     _imgPointer = (_imgPointer + 1 ) % (_imgData->_noImages);    // go to next image
+    _repeatCount = 0;
+   }
+   else{
+    _repeatCount = (_repeatCount + 1);
+   }*/
+   
    //if(mSema != NULL)
    {
     xHigherPriorityTaskWoken = pdTRUE;
@@ -51,7 +76,25 @@ void arm::showImage(){
   
   while(1){
     xSemaphoreTake( mSema, portMAX_DELAY );    // 10/portTICK_PERIOD_MS
-    ets_delay_us(mySettings.moveDelay);       // move delay for image alignment
+
+    if( _repeatCount >= mySettings.gifRepeat ){
+      _imgPointer = (_imgPointer + 1 ) % (_imgData->_noImages);    // go to next image
+      _repeatCount = 0;
+     }
+     else{
+      _repeatCount = (_repeatCount + 1);
+     }
+
+     
+    // O and 180 degrees delay
+    if(digitalRead(hallSensor1)){
+      udelay(mySettings.delay0s);
+    }else{
+      udelay(mySettings.delay180s);
+    }
+    
+    udelay(mySettings.specialDelay);   // Additional Manual delay to align Master with Slave
+    cdelay(mySettings.moveDelay);            // move delay for image alignment
     while(_colPointer < _imgData->_noColumnsPerImage){
         if(_colPointer < 0) break;
         //debugln("Image no: " + String(_imgPointer) + " , column: " + String(_colPointer));

@@ -21,6 +21,7 @@ StatusLed statusLed(RED_LED, GREEN_LED, BLUE_LED);
 // Reset task
 TaskHandle_t resetTaskHandle;
 
+
 volatile bool started_1 = false;   // this boolean will tell us if this is the first rotation, so we can act accordingly
 
 portMUX_TYPE serMutex = portMUX_INITIALIZER_UNLOCKED;  // mutex for sending to slave
@@ -31,7 +32,11 @@ void setup(){
   mqttInit();
   armsInit();
 
+  disableCore0WDT();
+  disableCore1WDT();
+   
   debugln("INIT: Initialization complete.");
+  statusLed.flashPurple(3);
 }
 
 
@@ -42,18 +47,28 @@ void loop(){
 
 // Function to initialize my settings
 void myInit(){
-  debugSerial.begin(250000);
+  debugSerial.begin(1000000);
   debugln("INIT: Setting up file system");
   if(!SPIFFS.begin(true)){
       debugln("INIT: SPIFFS Mount Failed");
+      statusLed.failed();
       return;
   }
 
+  debugln("\nFlash size: " + String(ESP.getFlashChipSize()) ); 
+  debugln("Free heap: " + String(ESP.getFlashChipSize()) ); 
+  debugln("SPIFFS Total bytes: " + String(SPIFFS.totalBytes()) );
+  debugln("SPIFFS Used bytes:" + String(SPIFFS.usedBytes()) );
+  debugln(); 
+    
   // set to green until settings does other wise
   statusLed.green();
+
+  // Inialize sync pin
+  pinMode(SYNC_PIN, OUTPUT);
   
   // Initialize reset pin
-  pinMode(RESET_SWITCH, INPUT);    
+  pinMode(RESET_SWITCH, INPUT);   
   digitalWrite(RESET_SWITCH, LOW);
   attachInterrupt(digitalPinToInterrupt(RESET_SWITCH), resetIsr, RISING );
 }
@@ -69,7 +84,7 @@ void resetTask(void *pvparameters){
   debugln("Starting reset task");
   
   unsigned long duration = millis();
-  statusLed.red();
+  //statusLed.red();
   while(digitalRead(RESET_SWITCH));  // Wait until button is released
   if(millis()-duration > 5000){  // Timeout occured
     debugln("Resetting lamp");
@@ -81,7 +96,7 @@ void resetTask(void *pvparameters){
 
 // Initialize the slave part of our master
 void armsInit(void){
-  arm1.setCore(0);  
+  arm1.setCore(1);  
   setupIsr();
 }
 
@@ -96,6 +111,6 @@ void printArray(char* arr, int len){
 // Error handler function
 void errorHandler(char* msg){
   debugln(msg);
-  statusLed.flashRed(2);
+  statusLed.failed();
 }
 

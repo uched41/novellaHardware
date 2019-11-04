@@ -4,7 +4,17 @@
 void setupIsr(){
   // Initialize trigger pin as interrupt to notify us form master
   debugln("INIT: Setting up ISRs for arms");
-  pinMode(hallSensor1, INPUT_PULLUP);
+  pinMode(hallSensor1, INPUT_PULLUP); //was INPUT_PULLOP
+  attachInterrupt(digitalPinToInterrupt(hallSensor1), isr1, CHANGE);
+}
+
+void disableIsr(void){
+  detachInterrupt(  digitalPinToInterrupt(hallSensor1) );
+  //arm1.leds->clear();
+}
+
+void enableIsr(void){
+  resetArms();
   attachInterrupt(digitalPinToInterrupt(hallSensor1), isr1, CHANGE);
 }
 

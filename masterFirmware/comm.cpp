@@ -1,7 +1,7 @@
 #include "comm.h"
 #include "myControl.h"
 
-#define NO_TRIALS   3                         // number of time to attempt to send data to the slave
+#define NO_TRIALS   3                          // number of time to attempt to send data to the slave
 #define buflen(c)   sizeof(c)/sizeof(c[0])
 
 uint8_t msgSignal[8]   = {0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A, 0x1A };
@@ -33,8 +33,14 @@ slave::slave(uint8_t tx, uint8_t rx, uint8_t serInstance){
 bool slave::attemptSend(){
   int tcount = 0;
   bool res = false;
+  statusLed.yellow();
   while( (tcount++<NO_TRIALS) && (!res) ){
     res = sendData();
+
+    if(!res){
+      statusLed.failed();
+    }
+    statusLed.yellow();
   }
   if(res){
     debugln("OK: Data sent to slave" + String(serialInstance));
@@ -70,6 +76,8 @@ bool slave::sendMsg(char* msg, int len){
   debugln("COMM: Sending message to slave.");
   debugln(msg);
 
+   serClear();
+   
   // generate message to send
   msgSignal[4] = (uint8_t)((len&0xff00)>>8);
   msgSignal[5] = (uint8_t)(len&0x00ff);
@@ -108,7 +116,9 @@ bool slave::sendData()
   // first send signal to notify slave of incoming data
   debugln("COMM: Sending data to slave " + String(serialInstance));
   debugln("COMM: Sending Initialization signal");
-  
+
+   serClear();
+   
   // generate message to send
   dataSignal[2] = (uint8_t)( ( tempStore._noImages & 0xff00 ) >> 8 );
   dataSignal[3] = (uint8_t)( tempStore._noImages & 0x00ff );
@@ -128,7 +138,7 @@ bool slave::sendData()
 
   // Start sending data
   for(int k=0; k<tempStore._noImages; k++){   // Iterate through images
-    debugln("Sending Image no: " + String(k));
+    debugln();
     for(uint16_t it=0; it<tempStore._noColumnsPerImage; it++){  // Iterate through columns
       memcpy(columnBuf, tempStore._frames[k]->_data[it], sColumn );
       tempCrc = crc(columnBuf, sColumn);
@@ -173,7 +183,7 @@ void slave::sendBuf(uint8_t* buf, uint16_t len)
 bool slave::waitForData(uint8_t* buf, uint16_t len)
 {
    auto ans = mySerial->readBytes( buf, len);
-   serClear();
+   //serClear();
    if(ans == len){
      //dumpBuf(buf, len);
      return true;

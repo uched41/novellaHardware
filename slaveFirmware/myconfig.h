@@ -21,6 +21,8 @@ extern volatile bool started_2;
 #define CLOCK_PIN1  18 // was 14
 #define SS_PIN1     5  // was 27
 
+#define SYNC_PIN        4      // pin used to syncrhonize master and slave
+
 // SPI2 pins
 //#define DATA_PIN2   23
 //#define CLOCK_PIN2  18
@@ -33,7 +35,7 @@ extern volatile bool started_2;
 // Serial communication pins for slave1
 #define SLAVE1_TX 2
 #define SLAVE1_RX 15
-#define myBaudRate 1000000
+#define myBaudRate  1924200 // 962100 // was 2000000
 
 #define debugSerial Serial
 #define debugln(c)    debugSerial.println(c)

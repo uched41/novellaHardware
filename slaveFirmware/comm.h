@@ -18,6 +18,10 @@ class Settings{
     
     int delayBtwColumns = 50;
     int moveDelay = 0;
+    int delay0s = 0;
+    int delay180s = 0;
+    int specialDelay = 0;
+    int gifRepeat = 0;
     
     void setBrightness(uint8_t val){
       brightnessPercent = val;
@@ -141,12 +145,22 @@ struct Img{
     clearBuffer();
   }
   
-  bool initBuffer(int len){
+  bool initBuffer(int len, bool use_spiram = true){
     clearBuffer();
     //debugln("Initializing Image buffer");
-    _data = (uint8_t**)ps_malloc( sizeof(uint8_t*)*len );
+    if(use_spiram){
+      _data = (uint8_t**)ps_malloc( sizeof(uint8_t*)*len );
+    }else{
+      _data = (uint8_t**)malloc( sizeof(uint8_t*)*len );
+    }
+    
     for(int i=0; i<len; i++){
-      uint8_t* newBuf = (uint8_t*)ps_malloc(_columnLength);
+      uint8_t* newBuf;
+      if(use_spiram){
+        newBuf = (uint8_t*)ps_malloc(_columnLength);
+      }else{
+        newBuf = (uint8_t*)malloc(_columnLength);
+      }
       if(newBuf == NULL){
         debugln("Mem allocation failed");
         clearBuffer();
@@ -192,12 +206,25 @@ struct Gif{
   }
   
   bool initGif(int noImages, int colLength, int noColumns){
-    _frames = (Img**)ps_malloc(sizeof(Img) * noImages);
+    clearGif();
+    if(noImages == 1){
+      _frames = (Img**)malloc(sizeof(Img) * noImages);
+    }else{
+      _frames = (Img**)ps_malloc(sizeof(Img) * noImages);
+    }
+    
     for(int i=0; i<noImages; i++){
       _frames[i] = new Img(colLength);
-      if(!_frames[i]->initBuffer(noColumns)){
-        return 0;
+      if(noImages == 1){
+        if(!_frames[i]->initBuffer(noColumns, false)){
+          return 0;
+        }
+      }else{
+        if(!_frames[i]->initBuffer(noColumns)){
+          return 0;
+        }
       }
+      
     }
      _noImages = noImages;
      _noColumnsPerImage = noColumns;

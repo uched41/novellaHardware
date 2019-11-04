@@ -3,7 +3,7 @@
 #include "myControl.h"
 #include <ESPmDNS.h>
 
-#define MQTT_MAX_PACKET_SIZE 1024
+#define MQTT_MAX_PACKET_SIZE 2048
 #include <PubSubClient.h>
 
 #include <ArduinoJson.h>
@@ -22,17 +22,19 @@ const char* mqtt_ping_topic   = "novella/devices/lampshade/ping/";
 const char* mqtt_command_topic   = "novella/devices/lampshade/command/";
 
 char mqtt_input_topic[50];
+char* specialReply;
 String mfname;
 char deviceID[18];
 String devID = " ";
 char* pingMsg;
 int len=0;
-int FILE_BUF_SIZE = 512;    // must correlate with mqtt buf size
+int FILE_BUF_SIZE = 1024;    // must correlate with mqtt buf size
+const char* tempfile = "/temp.bin";
 
-File mqttFile;
+File mqttTempFile;
 
 //DataBuffer dataStore(sColumn);          // Data storer object
-DataBuffer mqttStore(FILE_BUF_SIZE);    // This uses a bigger column size because it is used to store data received from mqtt temporarily before it is saved to a file.
+//DataBuffer mqttStore(FILE_BUF_SIZE);    // This uses a bigger column size because it is used to store data received from mqtt temporarily before it is saved to a file.
 ARM_DATA  tempStore;                 // Stores data in the same structure that it is displayed with
 Settings mySettings;                    // Initialize settings object
   
@@ -71,70 +73,81 @@ void mqttInit(void){
   root.printTo(pingMsg, root.measureLength()+1);
   debug("Ping Message: "); debugln(pingMsg);
 
+  // Generate speical OK Reply
+  DynamicJsonBuffer  jsonBuffer1(300);
+  JsonObject& root1 = jsonBuffer1.createObject();
+  root1["id"] = devID;
+  root1["response"] = String("OK");
+  specialReply = (char*)malloc(root1.measureLength()+1);
+  root1.printTo(specialReply, root1.measureLength()+1);
+  
   debug("MQTT Topics: "); debugln(mqtt_input_topic);
   mqttReconnect();
-  //mqttCommand("Starting");
+  mqttCommand("Starting");
 }
 
 
 // Call back function to process received data
-void mqttCallback(char* topic, byte* payload, unsigned int length) {
+void IRAM_ATTR mqttCallback(char* topic, byte* payload, unsigned int length) {
   bool sendToSlave = false;
-    
+
   char* sBuf[length];
   memcpy(sBuf, payload, length);
-  
+
   String tstring = String(topic);
   DynamicJsonBuffer  jsonBuffer(200);     // Config messages will be sent as Json
   JsonObject& root = (tstring.indexOf("mid") == -1) ? jsonBuffer.parseObject(payload) : jsonBuffer.createObject();
 
   // Receiving file
+  // We save directly to a tempfile, then if the data transfer was successful we rename the file
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
 
     if(tstring.indexOf("mid") > -1){   // receiving file content
-      memcpy(mqttStore._buffer[mqttStore.scount], payload, FILE_BUF_SIZE);
-      //dumpBuf(mqttStore._buffer[mqttStore.scount], FILE_BUF_SIZE);
-      mqttStore.scount = mqttStore.scount + 1;
+      mqttTempFile.write(payload, FILE_BUF_SIZE);
+      mqttSpecialReply();
+      statusLed.purple();
       debug('.');
-      mqttReply("OK");
     }
     else if(tstring.indexOf("start") > -1){  // check is this is a start message
+      disableIsr();   // Stop interrupts to stop display
       statusLed.onReceiving();
       const char* filen = root["filename"];
       mfname = String(filen);
       int flen = root["no_lines"];
 
-      if(SPIFFS.exists(filen)){             // Delete file if it already exists
-        debugln("MQTT: Previous file found, deleting...");
-        SPIFFS.remove(filen);
+      if(SPIFFS.exists(tempfile)){             // Delete temp file if it already exists
+        debugln("MQTT: Previous temp file found, deleting...");
+        SPIFFS.remove(tempfile);
+      }
+
+      mqttTempFile = SPIFFS.open(tempfile, FILE_WRITE);
+      if(!mqttTempFile){
+        errorHandler("Error opening file");
       }
       
       debug("MQTT: Receiving file: "); debugln(filen); 
       debug("MQTT: No of lines "); debugln(flen);
-      debugln("Initializing buffer ..");
-      if(!mqttStore.initBuffer(flen)) {
-        debugln("Failed to receive image");
-        return;
-      }
-      mqttStore.scount = 0;    
       mqttReply("OK");
     }
     else if(tstring.indexOf("end") > -1){    // handle end of file reception
-      debug("\nMQTT: File data received: "); debugln(mfname.c_str());
-      mqttFile = SPIFFS.open(mfname.c_str(), FILE_WRITE);
-      if(!mqttFile){
-        errorHandler("Error opening file");
-      }
+      mqttTempFile.close();
 
-      for(int i=0; i< mqttStore._noColumns; i++){
-        mqttFile.write(mqttStore._buffer[i], FILE_BUF_SIZE); 
+      if(SPIFFS.exists(mfname.c_str())){             // Delete file if it already exists
+        debugln("MQTT: Previous file found, deleting...");
+        SPIFFS.remove(mfname.c_str());
       }
-      mqttStore.clearBuffer();
       
-      mqttFile.close();
-      debugln("MQTT: File received successfully.");
-      mqttReply("OK");
-      statusLed.flashGreen(4);
+      debug("\nMQTT: File data received: "); debugln(mfname.c_str());
+      if( SPIFFS.rename(tempfile, mfname ) ){
+        debugln("MQTT: File received successfully.");
+        mqttReply("OK");
+        statusLed.flashGreen(4);
+      }else{
+        debugln("MQTT: Rename failed");
+      }
+      enableIsr();
+
+      resync();
     }
     return ;
   }
@@ -144,7 +157,7 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     debug("MQTT: Message arrived [");  debug(topic); debugln("] ");
     printArray((char*)payload, length); 
     String cmd = root["command"];
-
+    
     // Command to start displaying file
     if(cmd == "Start_Display"){
       const char* dispFile = root["file"];
@@ -154,8 +167,25 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       }
       bool ans = startImage(dispFile);
       mqttReply("Success");
-      debugln("Starting file: " + String(dispFile));
+
+      debugln("Sending latest settings to slave ...");
+      DynamicJsonBuffer  jsonBuffer(300);
+      JsonObject& root = jsonBuffer.createObject();
+      root["command"] = "Saved_Data";
+      root["Delay_Columns"] = mySettings.delayBtwColumns;
+      root["Brightness"] = mySettings.brightnessPercent;
+      root["Brightness_Mode"] = mySettings.brightnessMode;
+      root["Divider"] = mySettings.divider;
+      root["Move_Delay"] = mySettings.moveDelay;
+      root["Slave_Delay"] = mySettings.slaveDelay;
+      root["Delay0s"] = mySettings.delay0s;
+      root["Delay180s"] = mySettings.delay180s;
+      char* temp1;
+      int len = root.measureLength()+1;
+      temp1 = (char*)malloc(len);
+      root.printTo(temp1, len);
       
+      slave1.attempMsg((char*)temp1, len);
     }
 
      // Command to Delete bin file
@@ -179,8 +209,15 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       sendToSlave = true;
     }
 
+    // Command to restart
+    else if(cmd == "Reset"){
+      ESP.restart();
+      mqttReply("OK");
+    }
+
     // Command to get files in memory 
     else if(cmd == "Get_Files"){
+      disableIsr();
       File rootfs = SPIFFS.open("/");
       File fi = rootfs.openNextFile();
       String files = "";
@@ -197,6 +234,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       files.toCharArray(tem3, files.length()+1);
       mqttReply(tem3);
       free(tem3);
+
+      resync();
     }
 
     // Command to set brightness mode
@@ -245,6 +284,67 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       sendToSlave = true;
     }
 
+    // Command to set 0degrees delay
+    else if(cmd == "Delay0m"){
+      int val = root["value"];
+      debug("MQTT: Setting delay at 0 degrees: "); debugln(val);
+      mySettings.delay0m = val;
+      mqttReply("OK");
+    }
+
+    // Command to set 0degrees delay
+    else if(cmd == "Delay180m"){
+      int val = root["value"];
+      debug("MQTT: Setting delay at 180 degrees: "); debugln(val);
+      mySettings.delay180m = val;
+      mqttReply("OK");
+    }
+
+    // Command to set 0degrees delay
+    else if(cmd == "Delay0s"){
+      int val = root["value"];
+      debug("MQTT: Setting delay at 0 degrees: "); debugln(val);
+      mySettings.delay0s = val;
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+
+    // Command to set 0degrees delay
+    else if(cmd == "Delay180s"){
+      int val = root["value"];
+      debug("MQTT: Setting delay at 180 degrees: "); debugln(val);
+      mySettings.delay180s = val;
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+    
+    // Command to set move delay
+    else if(cmd == "Master_Delay"){
+      int val = root["value"];
+      debug("MQTT: Setting master delay: "); debugln(val);
+      mySettings.specialDelay = val;
+      mqttReply("OK");
+      sendToSlave = false;
+    }
+
+    // Command to set move delay
+    else if(cmd == "Slave_Delay"){
+      int val = root["value"];
+      mySettings.slaveDelay = val;
+      debug("MQTT: Setting slave delay: "); debugln(val);
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+
+    // Command to gif speed
+    else if(cmd == "Gif_Speed"){
+      int val = root["value"];
+      debug("MQTT: Setting gif speed: "); debugln(val);
+      mySettings.gifRepeat = val;
+      mqttReply("OK");
+      sendToSlave = true;
+    }
+    
     // Command to set divider
     else if(cmd == "Divider"){
       int val = root["value"];
@@ -254,27 +354,82 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
       sendToSlave = true;
     }
 
+    else if(cmd == "Sync"){
+      stopSlave();
+      disableIsr();
+      slave1.attempMsg((char*)sBuf, length); 
+      delay(1000);
+      arm1._imgPointer = 0;
+      startSlave();
+      enableIsr();
+    }
+
+    else if(cmd == "Disable_M"){
+      disableIsr();
+    }
+
+    else if(cmd == "Disable_S"){
+      sendToSlave = true;
+    }
+
+    else if(cmd == "Enable_M"){
+      enableIsr();
+    }
+
+    else if(cmd == "Enable_S"){
+      sendToSlave = true;
+    }
+    
     else if(cmd == "Saved_Data"){
       debugln("MQTT: Receiving saved settings");
+      
       mySettings.delayBtwColumns = root["Delay_Columns"];
       mySettings.setBrightness(root["Brightness"]);
       mySettings.brightnessMode = root["Brightness_Mode"];
       mySettings.divider = root["Divider"];
-      
+      mySettings.moveDelay = root["Move_Delay"];
+      mySettings.specialDelay = root["Master_Delay"];
+      mySettings.slaveDelay = root["Slave_Delay"];
+      mySettings.delay0m = root["Delay0m"];
+      mySettings.delay180m = root["Delay180m"];
+      mySettings.delay0s = root["Delay0s"];
+      mySettings.delay180s = root["Delay180s"];
       mySettings.isPaired = 1;
       statusLed.off();
       
+      /*if (!slave1.attempMsg((char*)sBuf, length)){
+        debugln("message send failed");
+        return;
+      }
+      debugln("config message sent to slave");
       sendToSlave = true;
-       
-      const char* img = root["Image"];
+      delay(500);*/
+      
+      const char* img = root["Image"];    // Start image first
       bool ans = startImage(img);
+      
       if(ans){
         mqttReply("Success");
       }
-      else {
-        mqttReply("Failed"); 
-        errorHandler("Error starting image");
-      }
+
+      debugln("Sending latest settings to slave ...");
+      DynamicJsonBuffer  jsonBuffer(300);
+      JsonObject& root = jsonBuffer.createObject();
+      root["command"] = "Saved_Data";
+      root["Delay_Columns"] = mySettings.delayBtwColumns;
+      root["Brightness"] = mySettings.brightnessPercent;
+      root["Brightness_Mode"] = mySettings.brightnessMode;
+      root["Divider"] = mySettings.divider;
+      root["Move_Delay"] = mySettings.moveDelay;
+      root["Slave_Delay"] = mySettings.slaveDelay;
+      root["Delay0s"] = mySettings.delay0s;
+      root["Delay180s"] = mySettings.delay180s;
+      char* temp1;
+      int len = root.measureLength()+1;
+      temp1 = (char*)malloc(len);
+      root.printTo(temp1, len);
+      
+      slave1.attempMsg((char*)temp1, len);
     }
 
     
@@ -282,7 +437,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
     if(sendToSlave){
       slave1.attempMsg((char*)sBuf, length);
     }
-    
+
+    statusLed.success();
     return ;
   }
   
@@ -290,7 +446,8 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
 // Function to reconnect to mqtt
 void mqttReconnect() {
-  while (!mqttclient.connected()) {         // Loop until we're reconnected
+  int attempt = 0;
+  while (!mqttclient.connected() && attempt++ < 2 ) {         // Loop until we're reconnected
     debugln("MQTT: Attempting MQTT connection...");
     if (mqttclient.connect(deviceID)) {     // Attempt to connect
       debugln("MQTT: connected");
@@ -325,12 +482,13 @@ void mqttLoop() {
 // mqtt server ping
 void mqttPing(){
    mqttclient.publish(mqtt_ping_topic, pingMsg);  
-   debugln("pinging");
+   statusLed.flashGreen(1);
+   //debugln("pinging");
 }
 
 // mqtt Reply
-void mqttReply(char* msg){
-  DynamicJsonBuffer  jsonBuffer(300);
+IRAM_ATTR void mqttReply(char* msg){
+  DynamicJsonBuffer  jsonBuffer(800);
   JsonObject& root = jsonBuffer.createObject();
   root["id"] = devID;
   root["response"] = String(msg);
@@ -341,6 +499,11 @@ void mqttReply(char* msg){
   
   mqttclient.publish(mqtt_output_topic, temp1);
   free(temp1);
+}
+
+// mqtt special ok reply
+inline void mqttSpecialReply(void){
+  mqttclient.publish(mqtt_output_topic, specialReply);
 }
 
 // mqtt command
@@ -361,12 +524,32 @@ void mqttCommand(char* msg){
 
 // Function to start displaying image
 bool startImage(const char* img){
+  disableIsr();   // Stop interrupts
   debugln("Starting Image, " + String(img));
+  stopSlave();
+  
+  if(!tempStore.readFromFile(img)) {    // read into temp buffer earlier to save time
+    debugln("Failed to set buffer");
+    enableIsr();   // Start interrupts
+    statusLed.failed();
+    return false;
+  }
   
   arm1.stop();
   statusLed.onTransferring();
-   
-  setArmData(img);
+  setArmData(img);    // Set arm data in the beginning
+  
+  // Send to slave first
+  if(!slave1.attemptSend()){   // send to slave1
+    debugln("MQTT: Unable to send to slave");
+    mqttReply("Error");
+    enableIsr();   // Start interrupts
+    statusLed.failed();
+    return 0;
+  }
+  tempStore.clearGif();
+  
+  // Start display on master if successfully sent to slave
   resetArms();
   
  if(arm1.isTaskCreated()){
@@ -375,21 +558,51 @@ bool startImage(const char* img){
   else{
     createTask(&arm1);          // Create task if not already created
   }  
+
+  startSlave();   // trigger slave
+  enableIsr();   // Start interrupts
+  //mySettings.delayBtwColumns = 0;
+  //mySettings.moveDelay = 0;
+    
   debugln("Image display started");
+  statusLed.success();
   statusLed.onDisplaying();
 
-  if(!tempStore.readFromFile(img)) {
-    debugln("Failed to set buffer");
-    return false;
-  }
-  if(!slave1.attemptSend()){   // send to slave1
-    debugln("MQTT: Unable to send to slave");
-    mqttReply("Error");
-    return 0;
-  }
-  tempStore.clearGif();
+  resync();
   
   return 1;
+}
+
+void startSlave(void){
+  //debugln("Activating Sync pin");
+  digitalWrite(SYNC_PIN, HIGH);
+}
+
+void stopSlave(void){
+  digitalWrite(SYNC_PIN, LOW);
+}
+
+void resync(void){
+  stopSlave();
+  disableIsr();
+
+  // Generate message for slave
+  DynamicJsonBuffer  jsonBuffer(800);
+  JsonObject& root = jsonBuffer.createObject();
+  root["command"] = "Sync";
+  char* temp1;
+  int len1 = root.measureLength()+1;
+  temp1 = (char*)malloc(len1);
+  root.printTo(temp1, len1);
+  
+  slave1.attempMsg((char*)temp1, len1); 
+  
+  delay(1000);
+  arm1._imgPointer = 0;
+  startSlave();
+  enableIsr();
+
+  free(temp1);
 }
 
 

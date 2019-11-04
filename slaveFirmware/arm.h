@@ -15,6 +15,7 @@ class arm{
     
     volatile int _colPointer = 0;        // variable that points to the current column being displayed
     volatile int _imgPointer = 0;
+    volatile int _repeatCount = 0;        // number of times the Gif has been repeated
     volatile bool dir = false;               // variable that determines direction
     
     uint8_t arm_no=0;

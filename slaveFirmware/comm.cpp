@@ -36,7 +36,7 @@ void initComm()
   // allocate buffer for columns
   columnBuf = (uint8_t*)malloc( sColumn + 2); // the extra 2 bytes is for the crc
   tempBuf = (uint8_t*)malloc(200);
-  //serClear(); 
+  serClear(); 
 }
 
 
@@ -132,6 +132,38 @@ void commParser()
         return;
       }
 
+      // set move delay
+      else if(cmd == "Slave_Delay"){
+        int val = root["value"];
+        debugln("MQTT: Setting slave delay: "); debugln(val);
+        mySettings.specialDelay = val;
+        return;
+      }
+
+      // set  delay
+      else if(cmd == "Delay0s"){
+        int val = root["value"];
+        debugln("MQTT: Setting 0 degrees delay: "); debugln(val);
+        mySettings.delay0s = val;
+        return;
+      }
+
+      // set  delay
+      else if(cmd == "Delay180s"){
+        int val = root["value"];
+        debugln("MQTT: Setting 180 degrees delay: "); debugln(val);
+        mySettings.delay180s = val;
+        return;
+      }
+      
+      // set gif speed
+      else if(cmd == "Gif_Speed"){
+        int val = root["value"];
+        debugln("MQTT: Setting gif speed: "); debugln(val);
+        mySettings.gifRepeat = val;
+        return;
+      }
+      
       // set column delay
       else if(cmd == "Divider"){
         debugln("Setting divy");
@@ -140,13 +172,33 @@ void commParser()
         mySettings.divider = val;
         return;
       }
-      
+
+      else if(cmd == "Sync"){
+        disableIsr();
+        while(!digitalRead(SYNC_PIN));  // wait for sync pin
+        arm1._imgPointer = 0;
+        enableIsr();   // Start interrupts
+      }
+
+      else if(cmd == "Disable_S"){
+        disableIsr();
+      }
+  
+      else if(cmd == "Enable_S"){
+        enableIsr();
+      }
+    
       else if(cmd == "Saved_Data"){
         debugln("MQTT: Receiving saved settings");
         mySettings.delayBtwColumns = root["Delay_Columns"];
         mySettings.setBrightness(root["Brightness"]);
         mySettings.brightnessMode = root["Brightness_Mode"];
         mySettings.divider = root["Divider"];
+        mySettings.moveDelay = root["Move_Delay"];
+        mySettings.specialDelay = root["Slave_Delay"];
+        mySettings.delay0s = root["Delay0s"];   // edited by leo
+        mySettings.delay180s = root["Delay180s"];     // edited by leo
+        //enableIsr();   // Start interrupts
      }
     
     }
@@ -158,86 +210,100 @@ void commParser()
   /*
     Parse Data message
   */
-  if( !isEqual(tempBuf, (uint8_t*)dataSignal, 2 ) ){
-    debugln("ERROR: Wrong starting sequence"); 
-    serClear(); return ;
-  }
-  debug("OK: Received Starting Sequence.");
-
-  if(!checkCrc(tempBuf, 8)){
-    debugln("ERROR: incorrect crc for startign response");
-    return;
-  }
-
-  //serClear();
-  uint16_t noImgs = tempBuf[2]<<8 | tempBuf[3];
-  uint16_t noCols = tempBuf[4]<<8 | tempBuf[5];
-
-  ARM_DATA bckUpStore;
-  bckUpStore.initGif(noImgs, sColumn, noCols);
-  
-  uint8_t* col = (uint8_t*)malloc( sColumn + 2);
-
-  uint16_t imgCount = 0;
-  uint16_t colCount = 0;   // read all the columns
-  debugln("INIT: Receiving data from master: " );
-  debugln("Number of Images: " + String(bckUpStore._noImages));
-  debugln("NUmber of columns per image: " + String(bckUpStore._noColumnsPerImage));
-  
-  sendBuf((uint8_t*)readySignal, buflen(readySignal));
-  if(arm1.isTaskCreated()){
-    arm1.stop();          // resume task if already created
-  }
-
-  while(imgCount < bckUpStore._noImages){
-    while(colCount < bckUpStore._noColumnsPerImage){
-      if( !waitForData(col, sColumn+2 ) ) {
-        debugln("ERROR: No Data received from master"); serClear();
-        goto freeBackup;      // free allocated memory before exiting
-      }
-      
-      if(!checkCrc(col, sColumn+2)){
-        goto freeBackup;      // free allocated memory before exiting
-      }
-       
-      memcpy( bckUpStore._frames[imgCount]->_data[colCount], col, sColumn );
-      //dumpBuf(col, sColumn);
-      sendBuf(col+sColumn, 2);    // reply to reply with crc of msg
-      colCount++;
-    }
-    colCount = 0;
-    debug('.');
-    imgCount++;
-    vTaskDelay(5/ portTICK_PERIOD_MS);
-  }
-  
-  debugln("");
-  debugln("OK: Complete Image data received");
-  
-  tempStore.initGif(noImgs, sColumn, noCols);
-  debugln("INIT: Copying data from backup buffer to main buffer.");
-  for(int i=0; i<noImgs; i++){
-    for(int j=0; j<noCols; j++){
-      memcpy(tempStore._frames[i]->_data[j], bckUpStore._frames[i]->_data[j], sColumn);
-    }
-  }
-  debugln("OK: Done copying data to main buffer");
-
-  setArmData(&tempStore);
-  resetArms();
-  
-freeBackup:
-  if(arm1.isTaskCreated()){
-      arm1.resume();          // resume task if already created
-  }
   else{
-     createTask(&arm1);          // Create task if not already created
-  }  
+    if( !isEqual(tempBuf, (uint8_t*)dataSignal, 2 ) ){
+      debugln("ERROR: Wrong starting sequence"); 
+      serClear(); 
+      ESP.restart(); 
+      return ;
+    }
+    debug("OK: Received Starting Sequence.");
   
-  bckUpStore.clearGif();
-  debugln("OK: Done Freeing backup buffers");
-  free(col);
-  serClear();
+    if(!checkCrc(tempBuf, 8)){
+      debugln("ERROR: incorrect crc for startign response");
+      ESP.restart();             
+      return;
+    }
+  
+    uint16_t noImgs = tempBuf[2]<<8 | tempBuf[3];
+    uint16_t noCols = tempBuf[4]<<8 | tempBuf[5];
+  
+    ARM_DATA bckUpStore;
+    bckUpStore.initGif(noImgs, sColumn, noCols);
+    
+    uint8_t* col = (uint8_t*)malloc( sColumn + 2);
+  
+    uint16_t imgCount = 0;
+    uint16_t colCount = 0;   // read all the columns
+    debugln("INIT: Receiving data from master: " );
+    debugln("Number of Images: " + String(bckUpStore._noImages));
+    debugln("NUmber of columns per image: " + String(bckUpStore._noColumnsPerImage));
+    
+    sendBuf((uint8_t*)readySignal, buflen(readySignal));
+    if(arm1.isTaskCreated()){
+      arm1.stop();          // resume task if already created
+    }
+  
+    disableIsr();   // Stop interrupts
+    while(imgCount < bckUpStore._noImages){
+      while(colCount < bckUpStore._noColumnsPerImage){
+        if( !waitForData(col, sColumn+2 ) ) {
+          debugln("ERROR: No Data received from master"); serClear();
+          ESP.restart();
+          goto freeBackup;      // free allocated memory before exiting
+        }
+        
+        if(!checkCrc(col, sColumn+2)){
+          ESP.restart();
+          goto freeBackup;      // free allocated memory before exiting
+        }
+         
+        memcpy( bckUpStore._frames[imgCount]->_data[colCount], col, sColumn );
+        //dumpBuf(col, sColumn);
+        sendBuf(col+sColumn, 2);    // reply to reply with crc of msg
+        colCount++;
+      }
+      colCount = 0;
+      debug('.');
+      imgCount++;
+      vTaskDelay(5/ portTICK_PERIOD_MS);
+    }
+    
+    debugln("");
+    debugln("OK: Complete Image data received");
+    
+    tempStore.initGif(noImgs, sColumn, noCols);
+    debugln("INIT: Copying data from backup buffer to main buffer.");
+    for(int i=0; i<noImgs; i++){
+      for(int j=0; j<noCols; j++){
+        memcpy(tempStore._frames[i]->_data[j], bckUpStore._frames[i]->_data[j], sColumn);
+      }
+    }
+    debugln("OK: Done copying data to main buffer");
+  
+    //delay(3000);
+    setArmData(&tempStore);
+    resetArms();
+    
+  freeBackup:
+    if(arm1.isTaskCreated()){
+        arm1.resume();          // resume task if already created
+    }
+    else{
+       createTask(&arm1);          // Create task if not already created
+    }  
+  
+    while(!digitalRead(SYNC_PIN));  // wait for sync pin
+    //while(digitalRead(SYNC_PIN));
+    
+    enableIsr();   // Start interrupts
+   
+    bckUpStore.clearGif();
+    debugln("OK: Done Freeing backup buffers");
+    free(col);
+    serClear();
+  }
+
 }
 
 
@@ -287,10 +353,7 @@ void dumpBuf(uint8_t *data, uint16_t length)
 // send buffer
 void sendBuf(uint8_t* buf, uint16_t len)
 {
-  for(uint16_t i=0; i< len; i++)
-  {
-    mySerial.write(buf[i]);
-  }
+  mySerial.write(buf, len);
   mySerial.flush();   // wait until all data is sent
 }
 

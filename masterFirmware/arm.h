@@ -10,11 +10,14 @@ class arm{
     ledDriver *leds;
     TaskHandle_t _mytask;            
     SemaphoreHandle_t  mSema = NULL;
+    //SemaphoreHandle_t  nSema = NULL;    // for second delay
+    //static hw_timer_t* timer = NULL;
     BaseType_t xHigherPriorityTaskWoken;
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     
     volatile int _colPointer = 0;        // variable that points to the current column being displayed
     volatile int _imgPointer = 0;
+    volatile int _repeatCount = 0;        // number of times the Gif has been repeated
     volatile bool dir = false;               // variable that determines direction
     
     uint8_t arm_no=0;
