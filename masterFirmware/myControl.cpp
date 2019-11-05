@@ -2,6 +2,7 @@
 #include "myconfig.h"
 #include "myControl.h"
 #include <ESPmDNS.h>
+//#include <HTTPClient.h>
 
 #define MQTT_MAX_PACKET_SIZE 2048
 #include <PubSubClient.h>
@@ -101,44 +102,32 @@ void IRAM_ATTR mqttCallback(char* topic, byte* payload, unsigned int length) {
   // Receiving file
   // We save directly to a tempfile, then if the data transfer was successful we rename the file
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
-
-    if(tstring.indexOf("mid") > -1){   // receiving file content
-      mqttTempFile.write(payload, FILE_BUF_SIZE);
-      mqttSpecialReply();
-      statusLed.purple();
-      debug('.');
-    }
-    else if(tstring.indexOf("start") > -1){  // check is this is a start message
+    
+    if(tstring.indexOf("start") > -1){  // check is this is a start message
       disableIsr();   // Stop interrupts to stop display
       statusLed.onReceiving();
       const char* filen = root["filename"];
+      const char* mUrl  = root["url"];
       mfname = String(filen);
-      int flen = root["no_lines"];
-
+      
       if(SPIFFS.exists(tempfile)){             // Delete temp file if it already exists
         debugln("MQTT: Previous temp file found, deleting...");
         SPIFFS.remove(tempfile);
       }
 
-      mqttTempFile = SPIFFS.open(tempfile, FILE_WRITE);
-      if(!mqttTempFile){
-        errorHandler("Error opening file");
+      bool ans = http_download(tempfile, mUrl);
+      if(!ans){
+        mqttReply("Error");
+        return;
       }
       
-      debug("MQTT: Receiving file: "); debugln(filen); 
-      debug("MQTT: No of lines "); debugln(flen);
-      mqttReply("OK");
-    }
-    else if(tstring.indexOf("end") > -1){    // handle end of file reception
-      mqttTempFile.close();
-
-      if(SPIFFS.exists(mfname.c_str())){             // Delete file if it already exists
+      if(SPIFFS.exists(filen)){             // Delete file if it already exists
         debugln("MQTT: Previous file found, deleting...");
-        SPIFFS.remove(mfname.c_str());
+        SPIFFS.remove(filen);
       }
-      
-      debug("\nMQTT: File data received: "); debugln(mfname.c_str());
-      if( SPIFFS.rename(tempfile, mfname ) ){
+
+      debug("\nMQTT: File data received: "); debugln(filen);
+      if( SPIFFS.rename(tempfile, filen ) ){
         debugln("MQTT: File received successfully.");
         mqttReply("OK");
         statusLed.flashGreen(4);
@@ -146,10 +135,10 @@ void IRAM_ATTR mqttCallback(char* topic, byte* payload, unsigned int length) {
         debugln("MQTT: Rename failed");
       }
       enableIsr();
-
       resync();
     }
     return ;
+    
   }
   
   // Receiving command
@@ -606,3 +595,52 @@ void resync(void){
 }
 
 
+// http download
+bool http_download(const char* filename, const char* url){
+ /* HTTPClient http;
+  debug("Starting http download for file: ");
+  debugln(filename);
+  
+  // configure server and url
+  http.begin(url);
+  int httpCode = http.GET();
+  if(httpCode > 0) {
+    debug("[HTTP] GET... code: "); debugln(httpCode);
+    if(httpCode == HTTP_CODE_OK) {
+        int len = http.getSize();
+        uint8_t buff[128] = { 0 };
+
+        // get tcp stream
+        WiFiClient * stream = http.getStreamPtr();
+        File mfile = SPIFFS.open(filename, FILE_WRITE);
+        
+        // read all data from server
+        while(http.connected() && (len > 0 || len == -1)) {
+            size_t size = stream->available();
+
+            if(size) {
+                // read up to 128 byte
+                int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
+                mfile.write(buff, c);
+                printArray((char*)buff, c);
+
+                if(len > 0) {
+                    len -= c;
+                }
+            }
+            delay(1);
+        }
+        mfile.close();
+        debugln();
+        debugln("[HTTP] connection closed or file end.\n");
+        http.end();
+        return true;
+      }
+  } 
+  else {
+      debugln("[HTTP] GET... failed, error: %s\n");
+      debugln(http.errorToString(httpCode).c_str());
+      http.end();
+      return false;
+    }*/
+}

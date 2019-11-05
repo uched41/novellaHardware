@@ -428,6 +428,6 @@ void splitData(char* filename);
 bool startImage(const char* img);
 void mqttCommand(char* msg);
 inline void mqttSpecialReply(void);
+bool http_download(const char* filename, const char* url);
 
 #endif
-
