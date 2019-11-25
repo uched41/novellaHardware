@@ -2,7 +2,7 @@
 #include "myconfig.h"
 #include "myControl.h"
 #include <ESPmDNS.h>
-//#include <HTTPClient.h>
+#include <HTTPClient.h>
 
 #define MQTT_MAX_PACKET_SIZE 2048
 #include <PubSubClient.h>
@@ -31,7 +31,7 @@ char* pingMsg;
 int len=0;
 int FILE_BUF_SIZE = 1024;    // must correlate with mqtt buf size
 const char* tempfile = "/temp.bin";
-
+String myIPString;
 File mqttTempFile;
 
 //DataBuffer dataStore(sColumn);          // Data storer object
@@ -50,7 +50,8 @@ void mqttInit(void){
   }
   IPAddress serverIp = MDNS.queryHost(mqtt_server, 5000);
   Serial.print("IP address of server: ");
-  Serial.println(serverIp.toString());
+  myIPString = serverIp.toString();
+  Serial.println(myIPString);
   MDNS.end();
   
   debugln("MQTT: Initilializing mqtt");
@@ -104,11 +105,13 @@ void IRAM_ATTR mqttCallback(char* topic, byte* payload, unsigned int length) {
   if(tstring.indexOf("image") > -1){    // Check if the message is a file ( Picture )
     
     if(tstring.indexOf("start") > -1){  // check is this is a start message
+      debugln("Receving file");
       disableIsr();   // Stop interrupts to stop display
       statusLed.onReceiving();
       const char* filen = root["filename"];
       const char* mUrl  = root["url"];
       mfname = String(filen);
+      debugln(mUrl);
       
       if(SPIFFS.exists(tempfile)){             // Delete temp file if it already exists
         debugln("MQTT: Previous temp file found, deleting...");
@@ -596,40 +599,70 @@ void resync(void){
 
 
 // http download
+
+// Linked list object to store downloaded data
+struct ddata{
+  uint8_t* rdata;
+  uint16_t len;
+  ddata* next = NULL;
+};
+
 bool http_download(const char* filename, const char* url){
- /* HTTPClient http;
+  HTTPClient http;
   debug("Starting http download for file: ");
   debugln(filename);
   
   // configure server and url
-  http.begin(url);
+  //http.begin(url);
+  http.begin(myIPString, 8000, url);
   int httpCode = http.GET();
+  
   if(httpCode > 0) {
     debug("[HTTP] GET... code: "); debugln(httpCode);
     if(httpCode == HTTP_CODE_OK) {
         int len = http.getSize();
-        uint8_t buff[128] = { 0 };
+        uint8_t buff[1024] = { 0 };
 
         // get tcp stream
         WiFiClient * stream = http.getStreamPtr();
         File mfile = SPIFFS.open(filename, FILE_WRITE);
+
+        ddata* download_data = new ddata();
+        ddata* current_data = download_data;
         
         // read all data from server
         while(http.connected() && (len > 0 || len == -1)) {
             size_t size = stream->available();
 
             if(size) {
-                // read up to 128 byte
+                // read up to buf size byte
                 int c = stream->readBytes(buff, ((size > sizeof(buff)) ? sizeof(buff) : size));
-                mfile.write(buff, c);
-                printArray((char*)buff, c);
-
+                current_data->len = c;
+                current_data->rdata = (uint8_t*)malloc(sizeof(uint8_t)*c);
+                memcpy(current_data->rdata, buff, c);
+                ddata* new_data = new ddata();
+                current_data->next = new_data;
+                current_data = new_data;
+                
+                debug(".");
                 if(len > 0) {
                     len -= c;
                 }
             }
-            delay(1);
+            //delay(1);
         }
+
+        debugln("Starting write to file");
+        ddata* iter = download_data;
+        while(iter !=NULL){
+          mfile.write(iter->rdata, iter->len);
+          free(iter->rdata);
+          current_data = iter;    // just so we can delete it
+          iter = iter->next;
+          delete current_data;
+          debug(".");
+        }
+        
         mfile.close();
         debugln();
         debugln("[HTTP] connection closed or file end.\n");
@@ -642,5 +675,5 @@ bool http_download(const char* filename, const char* url){
       debugln(http.errorToString(httpCode).c_str());
       http.end();
       return false;
-    }*/
+    }
 }
